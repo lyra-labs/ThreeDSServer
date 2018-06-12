@@ -4,10 +4,12 @@ const https = require('https')
 const fs = require('fs')
 
 const config = require('./config.json')
-const DSroute = require('./routes/ds.js')
-const ACSroute = require('./routes/acs.js')
-const merchantroute = require('./routes/merchant.js')
-const threeDSroute = require('./routes/threeDSServer.js')
+const threeDSData = require('./appData/threeDSServerPData')
+
+const DSroute = require('./routes/ds')
+const ACSroute = require('./routes/acs')
+const merchantroute = require('./routes/merchant')
+const threeDSroute = require('./routes/threeDSServer')
 
 const app = express()
 const port = config.port;
@@ -16,9 +18,7 @@ app.use(bodyParser.json())
 app.use('/ds', DSroute)
 app.use('/acs', ACSroute)
 app.use('/merchant', merchantroute)
-app.use('/threeDSServer', threeDSroute)
-
-console.log(process.argv[2])
+app.use('/threedsserver', threeDSroute)
 
 if (process.argv[2] && process.argv[2] === 'https') {
     let privateKey = fs.readFileSync('./certs/key.pem', 'utf8')
@@ -32,9 +32,15 @@ if (process.argv[2] && process.argv[2] === 'https') {
 
     let httpsServer = https.createServer(credentials, app)
     httpsServer.listen(port)
+    console.log('HTTPS ON');
+    
 } else {
     app.listen(port)
 }
+
+// call at server application startup and every 1h (3600000 millisecond)
+threeDSroute.requestThreeDSServerConfig();
+setTimeout(threeDSroute.requestThreeDSServerConfig, 3600000)
 
 console.log(`Started app on port ${port}`);
 

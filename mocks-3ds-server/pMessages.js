@@ -23,21 +23,11 @@ let getPResponse = () => {
         "dsEndProtocolVersion": "2.1.0",
         "cardRangeData": [{
             "startRange": "1000000000000000",
-            "endRange": "1000000000005000",
+            "endRange": "9999999999999999",
             "actionInd": "A",
             "acsStartProtocolVersion": "2.1.0",
             "acsEndProtocolVersion": "2.1.0",
             "threeDSMethodURL": "https://www.acs.com/script"
-        },
-        {
-            "startRange": "2000000000000000",
-            "endRange": "2000000000004000",
-            "dsStartProtocolVersion": "2.1.0",
-            "dsEndProtocolVersion": "2.1.0",
-            "actionInd": "D",
-            "acsStartProtocolVersion": "2.1.0",
-            "acsEndProtocolVersion": "2.1.0",
-            "threeDSMethodURL": "https://www.acs2.com/method"
         }]
     }
 }
