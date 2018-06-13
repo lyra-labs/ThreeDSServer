@@ -9,11 +9,11 @@
 // authentication messages
 // BRW
 
-let getSecondARequest = () => {
+let getARequest = () => {
     return {
         "threeDSCompInd": "Y",
         "threeDSRequestorID": "az0123456789",
-        "threeDSRequestorName": "Example Requestor name",
+        "threeDSRequestorName": "threeDSDemonstrator",
         "threeDSRequestorURL": "localhost:8080/merchant",
         "acquirerBIN": "868491",
         "acquirerMerchantID": "mGm6AJZ1YotkJJmOk0fx",

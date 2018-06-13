@@ -1,10 +1,12 @@
+const fetch = require('node-fetch') 
 const express = require('express')
 const router = express.Router()
+const appData = require('../appData/appInformation')
 
 
 // Call the 3DS Server to initiate transaction
 let startThreeDSProtocole = (formBody) => {
-    return  fetch('/threedsserver/starttransaction', {
+    return  fetch(appData.baseUrl + '/threedsserver/starttransaction', {
             method : 'POST',
             credentials: 'none',
             headers: {
@@ -26,7 +28,7 @@ let checkPaymentData = (body) => {
          !body.cvv          || !body.cc_date ||
          !body.price        || !body.name ||
          !body.postcode     || !body.city_name ||
-         !body.phone_number || !body.adress) { 
+         !body.phone_number || !body.address) { 
              return {
                 'status': 'ko',
                 'message': 'missing one or more payment field'    
