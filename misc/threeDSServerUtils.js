@@ -18,11 +18,13 @@ let requestThreeDSServerConfig = () => {
             if (response) {
                 console.log(JSON.stringify(response));
 
-                if (!response.MessageVersion || !appData.checkThreeDSVersion(response.messageVersion)) { return { 'status': 'ko' } }
+                if (!appData.checkThreeDSVersion(response.messageVersion)) {return { 'status': 'ko' }}
+
                 if (!response.cardRangeData) { // TODO check and log where does it pass
                     appData.data.isCarRanges = false
                     return { 'status': 'ko' }
                 }
+                threeDSSServerData.PResponseHeader = response
                 return response
             }
             return { 'status': 'ko' }

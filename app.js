@@ -12,6 +12,10 @@ const ACSroute = require('./routes/acs')
 const merchantroute = require('./routes/merchant')
 const threeDSroute = require('./routes/threeDSServer')
 
+// testing module
+
+const my_test = require('./test')
+
 const app = express()
 const port = config.port;
 app.use(bodyParser.json())
@@ -40,14 +44,15 @@ if (process.argv[2] && process.argv[2] === 'https') {
 }
 
 // call at server application startup and every 1h (3600000 millisecond)
-setTimeout(threeDSUtils.requestThreeDSServerConfig, 3600000)
+setInterval(threeDSUtils.requestThreeDSServerConfig, 3600000)
 
 // the next call is a normal one, all the chained actions are only for a testing purpose
 
 threeDSUtils.requestThreeDSServerConfig()
 .then((response) => {
+    
     console.log(JSON.stringify(response));
-    // call the test module to start aReq
+    my_test.testAreq()
     
 })
 

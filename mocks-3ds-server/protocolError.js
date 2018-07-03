@@ -2,6 +2,8 @@
 //   Here some sample or error JSON objects
 //
 
+// The errorMessageType must contain the request Name wich failed
+
 let getGenericFormatError = () => {
     return {
         "threeDSServerTransID": "6afa6072-9412-446b-9673-2f98b3ee98a2",

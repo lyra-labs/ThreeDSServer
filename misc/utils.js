@@ -9,14 +9,17 @@ let jsonError = (message) => {
 
 let isCreditCardInRange = (cardNumber) => {
     let pRes = threeDSData.PResponseHeader 
+    let isCardInRange = false
+
+    if (!pRes || !pRes.cardRangeData) {return false}
 
     pRes.cardRangeData.forEach(elem => {
         if (cardNumber >= elem.startRange && cardNumber <= elem.endRange) {
-            return true
+            isCardInRange = true
         }
         
     })
-    return false
+    return isCardInRange
 }
 
 module.exports = {

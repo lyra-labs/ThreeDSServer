@@ -57,6 +57,8 @@ router.post('/pay', (request, response) => {
 
         startThreeDSProtocole(checkeddData)
         .then((response) => {
+            console.log("Return of startThreeDSProtocol from merchant.js");
+            console.log(JSON.stringify(response))
             // TODO do something cool
         })
 })

@@ -12,6 +12,7 @@ let data = {
 
 let checkThreeDSVersion = (version) => {
     data.isVersionMatching = version === data.threeDSVersion
+    
     return data.isVersionMatching
 }
 

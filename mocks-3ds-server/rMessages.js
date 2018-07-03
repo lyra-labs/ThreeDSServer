@@ -1,4 +1,3 @@
-// Absolutly no idea of what it is
 
 
 let getRRequest = () => {

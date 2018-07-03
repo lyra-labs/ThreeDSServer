@@ -18,14 +18,9 @@ let startAuthentication = (aReq) => {
         },
         body: JSON.stringify(aReq)
     })
-    .then((response) => response.json())
-    .then((response) => {
-        console.log('auth result received')
-        console.log(JSON.stringify(response));
-    })
 }
 
-let getUpdatedAreq = (formBody) => {
+let getUpdatedAreq = (body) => {
     if (!body.cc_number    || !body.email ||
         !body.cvv          || !body.cc_date ||
         !body.price        || !body.name ||
@@ -48,15 +43,17 @@ router.post('/starttransaction', (request, response) => {
         return
     }
     let updatedAreq = getUpdatedAreq(request.body)
-    let PResponseHeader = appData.threeDSSServerData.PResponseHeader
+    let PResponseHeader = threeDSSServerData.PResponseHeader
 
-    if (updatedAreq.status === 'ko') {response.json(updatedAreq)}
-    if (!utils.isCreditCardInRange(request.body.cc_number)) {response.json(utils.jsonError('Credit card number is not in 3DS2 range'))}
-    if (updatedAreq.messageVersion !== appData.data.version) {response.json(utils.jsonError('Not compatible version'))}
+    if (updatedAreq.status === 'ko') {response.json(updatedAreq); return}
+    if (!utils.isCreditCardInRange(request.body.cc_number)) {response.json(utils.jsonError('Credit card number is not in 3DS2 range')); return}
+    if (!appData.checkThreeDSVersion(updatedAreq.messageVersion)) {response.json(utils.jsonError('Not compatible version')); return}
 
     startAuthentication(updatedAreq)
     .then((response) => response.json())
     .then((response) => {
+        console.log('in 3dsserver response from DS');
+        
         console.log(JSON.stringify(response));
         // TODO check the Ares and continue process if necessary
         // TODO don't forget to use webauthn as a second factor
