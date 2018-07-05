@@ -13,7 +13,7 @@ let checkUserData = (userData) => {
 }
 
 
-router.post('/acs/authrequest', (request, response) => {
+router.post('/authrequest', (request, response) => {
 
     aRes = aResponses.getBRWChallengeFlow() 
     eRes = eMessages.getGenericFormatError()
@@ -21,18 +21,28 @@ router.post('/acs/authrequest', (request, response) => {
     aRes.ascURL = appData.baseUrl + '/acs'
 
     if (request && request.body) {
-        if (! appData.checkThreeDSVersion(request.body.messageVersion)) {
+        console.log("J'ai un body. Nice !");
+        
+        if (!appData.checkThreeDSVersion(request.body.messageVersion)) {
+            console.log("version check failed");
             eRes.errorDescription = 'Bad version'
             response.json(eRes)
+            return
         }
         if (checkUserData(request.body)) {
-            aRes.transStatus = 'Y'
+            console.log("True est bien égal à true");
+            aRes.transStatus = "Y"
             response.json(aRes)
+            return
         } else {
-            aRes.transStatus = 'C'
+            console.log("True est en fait égal a false");
+            aRes.transStatus = "C"
             response.json(aRes)
+            return
         }
     }
+    console.log("j'ai pas de body :(");
+    
     eRes.errorDescription = 'Request body is empty'
     response(eRes.json())
 

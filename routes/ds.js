@@ -6,23 +6,6 @@ const pMessages = require('../mocks-3ds-server/pMessages')
 const eMessages = require('../mocks-3ds-server/protocolError')
 const appData = require('../appData/appInformation')
 
-// Handle the PReq request and respond with a PRes
-
-let sendAuthToACS = (AReq) => {
-
-    console.log(JSON.stringify(AReq));
-    
-    return fetch(appData.baseUrl + '/acs/authrequest', {
-        method: 'POST',
-        credentials: 'none',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(AReq)
-    })
-}
-
-
 router.post('/updatepres', (request, response) => {
 
     let pReq = {}
@@ -44,7 +27,42 @@ router.post('/updatepres', (request, response) => {
     response.json(eRes)
 })
 
+// Handle the PReq request and respond with a PRes
+
+let sendAuthToACS = (AReq) => {
+
+    return fetch(appData.baseUrl + '/acs/authrequest', {
+        method: 'POST',
+        credentials: 'none',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(AReq)
+    })
+        .then((response) => response.json())
+        .then((response) => {
+            console.log('response JSONIFIED')
+            console.log(response);
+
+            return response
+        })
+}
+
+
+
 // Handle the AReq request and pass it to the ACS
+
+let doSentAuthToACS = (aReq, initialResponse) => {
+    sendAuthToACS(aReq)
+        .then((response) => {
+            console.log("in DS / authrequst");
+            console.log(response);
+
+            initialResponse.json(response)
+            return
+        })
+        // .catch((error) => console.log( 'DS post to asc/authrequest error: ' + error))
+}
 
 router.post('/authrequest', (request, response) => {
 
@@ -59,14 +77,8 @@ router.post('/authrequest', (request, response) => {
             return
         }
 
-        sendAuthToACS(aReq)
-            .then((ReqResponse) => {ReqResponse.json(); console.log(ReqResponse.body);})
-            
-            .then((ReqResponse) => {
-                console.log("in DS / authrequst");
-                
-                response.json(ReqResponse)
-            })
+        doSentAuthToACS(aReq, response)
+        return
 
     }
     eRes.errorDescription = 'The request does not have a body'
