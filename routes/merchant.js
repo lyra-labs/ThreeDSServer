@@ -40,6 +40,18 @@ let checkPaymentData = (body) => {
 
 // Handle the browser payment request
 
+let doStartThreeDSProtocole = (checkeddData, oldResponse) => {
+        startThreeDSProtocole(checkeddData)
+        .then((response) => {
+            console.log("Return of startThreeDSProtocol from merchant.js");
+            console.log(JSON.stringify(response))
+            oldResponse.json(response)
+            // what contain the context of the response
+            // data contain the related object
+        })
+
+}
+
 router.post('/pay', (request, response) => {
     if (!request.body) {
             response.json({
@@ -55,12 +67,7 @@ router.post('/pay', (request, response) => {
              return
         }
 
-        startThreeDSProtocole(checkeddData)
-        .then((response) => {
-            console.log("Return of startThreeDSProtocol from merchant.js");
-            console.log(JSON.stringify(response))
-            // TODO do something cool
-        })
+        doStartThreeDSProtocole(checkeddData, response)
 })
 
 module.exports = router

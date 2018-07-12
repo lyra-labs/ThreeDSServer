@@ -2,6 +2,7 @@ const fetch = require('node-fetch')
 const pMessages = require('../mocks-3ds-server/pMessages')
 const appData = require('../appData/appInformation')
 const threeDSSServerData = require('../appData/threeDSServerPData')
+const threeDSError = require('../mocks-3ds-server/protocolError')
 
 let requestThreeDSServerConfig = () => {
 
@@ -18,7 +19,7 @@ let requestThreeDSServerConfig = () => {
             if (response) {
                 console.log(JSON.stringify(response));
 
-                if (!appData.checkThreeDSVersion(response.messageVersion)) {return { 'status': 'ko' }}
+                if (!appData.checkThreeDSVersion(response.messageVersion)) { return { 'status': 'ko' } }
 
                 if (!response.cardRangeData) { // TODO check and log where does it pass
                     appData.data.isCarRanges = false
@@ -31,6 +32,65 @@ let requestThreeDSServerConfig = () => {
         })
 }
 
+let respondWithError = (why, response, what) => {
+    let finalResponse = {}
+
+    if (why === 'Bad Version') {
+        errResponse = threeDSError.getGenericFormatError()
+        errResponse.errorMessageType = "Areq"
+        errResponse.errorDescription = "Bad version"
+        finalResponse.what = what
+        finalResponse.data = errResponse
+        response.json(final)
+    } else {
+        finalResponse.what = what
+        finalResponse.data = why
+        response.json(finalResponse)
+    }
+}
+
+// letting differents functions because they might need
+// to be specific later
+
+let respondChallenge = (aRes, response, what) => {
+    let finalResponse = {}
+
+    finalResponse.what = what
+    finalResponse.data = aRes
+    response.json(finalResponse)
+}
+
+let respondAuthentified = (aRes, response, what) => {
+    let finalResponse = {}
+    console.log('juiu la');
+    
+
+    finalResponse.what = what
+    finalResponse.data = aRes
+    response.json(finalResponse)
+}
+
+let respondTry = (aRes, response, what) => {
+    let finalResponse = {}
+
+    finalResponse.what = what
+    finalResponse.data = aRes
+    response.json(finalResponse)
+}
+
+let respondNop = (aRes, response, what) => {
+     let finalResponse = {}
+
+    finalResponse.what = what
+    finalResponse.data = aRes
+    response.json(finalResponse)
+}
+
+
 module.exports = {
-    requestThreeDSServerConfig
+    requestThreeDSServerConfig,
+    respondChallenge,
+    respondAuthentified,
+    respondNop,
+    respondTry,
 }

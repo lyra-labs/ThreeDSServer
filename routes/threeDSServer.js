@@ -5,7 +5,10 @@ const threeDSSServerData = require('../appData/threeDSServerPData')
 const appData = require('../appData/appInformation')
 const pMessages = require('../mocks-3ds-server/pMessages')
 const aRequests = require('../mocks-3ds-server/aRequests')
+const eMessages = require('../mocks-3ds-server/protocolError')
+const rMessages = require('../mocks-3ds-server/rMessages')
 const utils = require('../misc/utils')
+const threeDSUtils = require('../misc/threeDSServerUtils')
 
 // lauch AReq to the DS
 let startAuthentication = (aReq) => {
@@ -38,14 +41,47 @@ let getUpdatedAreq = (body) => {
 }
 
 let processAres = (response) => {
-    
+
     if (!appData.checkThreeDSVersion(response.messageVersion)) { return 'Bad Version' }
-    else if (response.transStatus == 'C') { return 'Challenge'}
-    else if (response.transStatus == 'Y') { return 'Authentified'}
-    else if (response.transStatus == 'C') { return 'Try'}
-    else if (response.transStatus == 'N') { return 'NonAuth'}
-    else { return 'Error'}
-    
+    if (response.messageType == 'Erro') { return 'Error' }
+    else if (response.transStatus == 'C') { return 'Challenge' }
+    else if (response.transStatus == 'Y') { return 'Authentified' }
+    else if (response.transStatus == 'C') { return 'Attempt' }
+    else if (response.transStatus == 'N') { return 'NonAuth' }
+    else { return 'Error' }
+}
+
+let doStartAuthentication = (updatedAreq, oldResponse) => {
+
+    startAuthentication(updatedAreq)
+        .then((response) => response.json())
+        .then((response) => {
+            console.log('in 3dsserver response from DS');
+
+            console.log(JSON.stringify(response));
+            let authStatus = processAres(response)
+            switch (authStatus) {
+                case 'Bad Version':
+                    threeDSUtils.respondWithError('Bad version', oldResponse, authStatus)
+                    break;
+                case 'Challenge':
+                    threeDSUtils.respondChallenge(response, oldResponse, authStatus);
+                    break;
+                case 'Authentified':
+                    threeDSUtils.respondAuthentified(response, oldResponse, authStatus); // OK
+                    break;
+                case 'Attempt':
+                    threeDSUtils.respondAttempt(response, oldResponse, authStatus); // Tentative d'auth, on connais pas le résultat mais ça passe il est auth
+                    break;
+                case 'NonAuth': // KO
+                    threeDSUtils.respondNop(response, oldResponse, authStatus);
+                    break;
+                default:
+                    threeDSUtils.respondWithError(response, oldResponse, authStatus);
+                    break;
+            }
+        })
+        .catch((error) => console.log('threeDSServer post to ds/authrequest error: ' + error))
 }
 
 router.post('/starttransaction', (request, response) => {
@@ -60,17 +96,29 @@ router.post('/starttransaction', (request, response) => {
     if (!utils.isCreditCardInRange(request.body.cc_number)) { response.json(utils.jsonError('Credit card number is not in 3DS2 range')); return }
     if (!appData.checkThreeDSVersion(updatedAreq.messageVersion)) { response.json(utils.jsonError('Not compatible version')); return }
 
-    startAuthentication(updatedAreq)
-        .then((response) => response.json())
-        .then((response) => {
-            console.log('in 3dsserver response from DS');
+    doStartAuthentication(updatedAreq, response)
 
-            console.log(JSON.stringify(response));
-            processAres(response)
-            // TODO check the Ares and continue process if necessary
-            // TODO don't forget to use webauthn as a second factor
-        })
-        .catch((error) => console.log('threeDSServer post to ds/authrequest error: ' + error))
+})
+
+router.post('/result', (request, response) => {
+
+    let Rres = rMessages.getRResponse()
+    let eMessage = eMessages.getGenericFormatError()
+    eMessage.errorMessageType = 'RRes'
+
+    if (request && request.body) {
+        if (!appData.checkThreeDSVersion(request.body.messageVersion)) {
+            eMessage.errorDescription = 'Bad version'
+            response.json(eMessage)
+            return
+        }
+
+        (request.body.transStatus === 'Y' || request.body.transStatus === 'A') ? Rres.resultsStatus = '00' : Rres.resultsStatus = '01'
+        response.json(Rres)
+        return
+    }
+    eMessage.errorDescription = 'Request failed, missing body'
+    response.json(eMessage)
 })
 
 module.exports = router

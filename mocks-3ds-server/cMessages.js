@@ -20,6 +20,8 @@ let getCResponse = () => {
         "threeDSServerTransID": "8a880dc0-d2d2-4067-bcb1-b08d1690b26e",
         "acsTransID": "d7c1ee99-9478-44a6-b1f2-391e29c6b340",
         "acsUiType": "01",
+        "acsHTML" : "",
+        "acsUiType" : "05",
         "challengeAddInfo": "Additional information to be shown.",
         "challengeCompletionInd": "N",
         "challengeInfoHeader": "Header information",
@@ -41,7 +43,6 @@ let getCResponse = () => {
             "extraHigh": "https://ds.com/extraHigh_image.svg"
         },
         "resendInformationLabel": "Send new One-time-password",
-        "sdkTransID": "b2385523-a66c-4907-ac3c-91848e8c0067",
         "submitAuthenticationLabel": "Continue",
         "whyInfoLabel": "Why using 3-D Secure?",
         "whyInfoText": "Some explanation about why using 3-D Secure is an excellent idea as part of an online payment transaction",

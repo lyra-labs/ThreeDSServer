@@ -69,7 +69,7 @@ let getARequest = () => {
         "purchaseExponent": "2",
         "purchaseDate": "20170316141312",
         "transType": "01",
-        "threeDSServerURL": " https://threedsserver.adomainname.net ",
+        "threeDSServerURL": "http://localhost:4242/threedsserver",
         "threeDSServerTransID": "8a880dc0-d2d2-4067-bcb1-b08d1690b26e",
         "threeDSServerRefNumber": "3DS_LOA_SER_PPFU_020100_00008",
         "threeDSRequestorAuthenticationInd": "03",
@@ -108,7 +108,7 @@ let getARequest = () => {
         "acctID": "personal account",
         "dsReferenceNumber": "DS_LOA_DIS_PPFU_020100_00010",
         "dsTransID": "1jpe0dc0-i9t2-4067-bcb1-nmt866956sgd",
-        "dsURL": "https://dsserver.domainname.com",
+        "dsURL": "http://localhost:4242/ds",
         "payTokenInd": true,
         "purchaseInstalData": "024",
         "merchantRiskIndicator": {

@@ -53,6 +53,9 @@ threeDSUtils.requestThreeDSServerConfig()
     
     console.log(JSON.stringify(response));
     my_test.testAreq()
+    .then((response) => {
+        my_test.testRReq()
+    })
     
 })
 

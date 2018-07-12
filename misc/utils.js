@@ -7,6 +7,8 @@ let jsonError = (message) => {
     }
 }
 
+
+// Should have used a array.some for this purpose but this function is subject to change
 let isCreditCardInRange = (cardNumber) => {
     let pRes = threeDSData.PResponseHeader 
     let isCardInRange = false

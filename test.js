@@ -15,7 +15,7 @@ let paymentData = {
 }
 
 let testAreq = () => {
-    fetch(appData.baseUrl +  '/merchant/pay', {
+    return fetch(appData.baseUrl +  '/merchant/pay', {
         method: 'POST',
         credentials: 'none',
         headers: {
@@ -28,9 +28,32 @@ let testAreq = () => {
         console.log("test response");
         
         console.log(JSON.stringify(response));
+        return response
+    })
+}
+
+let resultData = {}
+
+let testRReq = () => {
+    fetch(appData.baseUrl +  '/acs/challengeresult', {
+        method: 'POST',
+        credentials: 'none',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(resultData)
+    })
+    .then((response) => response.json())
+    .then((response) => {
+        console.log("test RREs response");
+        
+        console.log(JSON.stringify(response));
         
     })
 }
+
+
 module.exports = {
-    testAreq
+    testAreq,
+    testRReq
 }
