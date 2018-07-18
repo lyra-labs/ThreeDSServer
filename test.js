@@ -1,5 +1,22 @@
 const fetch = require('node-fetch') 
 const appData = require('./appData/appInformation')
+const areqmessages = require('./mocks-3ds-server/aRequests')
+const aresmessages = require('./mocks-3ds-server/aResponses')
+const cmessages = require('./mocks-3ds-server/cMessages')
+const pmessages = require('./mocks-3ds-server/pMessages')
+const rmessages = require('./mocks-3ds-server/rMessages')
+
+let testForAlex = () => {
+
+    console.log('Size of AREQ : ' + Buffer.byteLength(JSON.stringify(areqmessages.getARequest()), 'utf8'));
+    console.log('Size of ARES : ' + Buffer.byteLength(JSON.stringify(aresmessages.getBRWChallengeFlow()), 'utf8'));
+    console.log('Size of CREQ : ' + Buffer.byteLength(JSON.stringify(cmessages.getCRequest()), 'utf8'));
+    console.log('Size of CRES : ' + Buffer.byteLength(JSON.stringify(cmessages.getCResponse()), 'utf8'));
+    console.log('Size of PREQ : ' + Buffer.byteLength(JSON.stringify(pmessages.getPRequest()), 'utf8'));
+    console.log('Size of PRES : ' + Buffer.byteLength(JSON.stringify(pmessages.getPResponse()), 'utf8'));
+    console.log('Size of RREQ : ' + Buffer.byteLength(JSON.stringify(rmessages.getRRequest()), 'utf8'));
+    console.log('Size of RRES : ' + Buffer.byteLength(JSON.stringify(rmessages.getRResponse()), 'utf8'));
+}
 
 let paymentData = {
     cc_number : '4111111111111111',
@@ -55,5 +72,6 @@ let testRReq = () => {
 
 module.exports = {
     testAreq,
-    testRReq
+    testRReq,
+    testForAlex
 }

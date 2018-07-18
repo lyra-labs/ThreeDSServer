@@ -2,6 +2,7 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const https = require('https')
 const fs = require('fs')
+const path = require('path')
 
 const config = require('./config.json')
 const threeDSData = require('./appData/threeDSServerPData')
@@ -18,7 +19,9 @@ const my_test = require('./test')
 
 const app = express()
 const port = config.port;
+
 app.use(bodyParser.json())
+app.use(express.static(path.join(__dirname, 'static')));
 
 app.use('/ds', DSroute)
 app.use('/acs', ACSroute)
@@ -43,6 +46,7 @@ if (process.argv[2] && process.argv[2] === 'https') {
     app.listen(port)
 }
 
+my_test.testForAlex()
 // call at server application startup and every 1h (3600000 millisecond)
 setInterval(threeDSUtils.requestThreeDSServerConfig, 3600000)
 
@@ -54,7 +58,7 @@ threeDSUtils.requestThreeDSServerConfig()
     console.log(JSON.stringify(response));
     my_test.testAreq()
     .then((response) => {
-        my_test.testRReq()
+        // my_test.testRReq()
     })
     
 })

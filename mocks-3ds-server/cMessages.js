@@ -19,9 +19,6 @@ let getCResponse = () => {
     return {
         "threeDSServerTransID": "8a880dc0-d2d2-4067-bcb1-b08d1690b26e",
         "acsTransID": "d7c1ee99-9478-44a6-b1f2-391e29c6b340",
-        "acsUiType": "01",
-        "acsHTML" : "",
-        "acsUiType" : "05",
         "challengeAddInfo": "Additional information to be shown.",
         "challengeCompletionInd": "N",
         "challengeInfoHeader": "Header information",

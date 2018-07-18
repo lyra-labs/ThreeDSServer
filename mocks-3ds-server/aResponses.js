@@ -64,7 +64,7 @@ let getBRWChallengeFlow = () => {
         "dsReferenceNumber": "DS_LOA_DIS_PPFU_020100_00010",
         "transStatus": "C",
         "acsChallengeMandated": "Y",
-        "acsURL": "https://test.com",
+        "acsURL": "http://localhost:4242/acs/providechallenge",
         "authenticationType": "01"
     }
 }

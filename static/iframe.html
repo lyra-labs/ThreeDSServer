@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- <title>Page Title</title> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="http://localhost:4242/challenge_form.css">
+</head>
+
+<script>
+
+    let sendChallInputToACS = (form_data) => {
+        return fetch('http://localhost:4242/acs/challengeresult', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(form_data)
+        })
+            .then((response) => response.json())
+            .then((response) => {
+                return response
+            })
+    }
+
+    $(document).ready(() => {
+
+        $('#button-submit').click((event) => {
+            event.preventDefault()
+
+            let form_data = {}
+            form_data.email = $('#inputEmail').val()
+            form_data.password = $('#inputPassword').val()
+            form_data.sms = $('#inputSMS').val()
+
+            console.log(form_data);
+            
+
+            sendChallInputToACS(form_data)
+                .then((response) => {
+                    console.log(response);
+                    
+                })
+        })
+
+    })
+
+</script>
+
+<body>
+
+    <div class="container">
+
+        <form class="form-signin">
+            <h2 class="form-signin-heading">Please sign in</h2>
+            <label for="inputEmail" class="sr-only">Email address</label>
+            <input type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
+            <label for="inputPassword" class="sr-only">Password</label>
+            <input type="password" id="inputPassword" class="form-control" placeholder="Password" required>
+            <label for="inputSMS" class="sr-only">SMS</label>
+            <input type="text" id="inputSMS" class="form-control" placeholder="SMS security code" required>
+            <div class="checkbox">
+                <!-- <label>
+                    <input type="checkbox" value="remember-me"> Remember me
+                </label> -->
+            </div>
+            <button id='button-submit' class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+        </form>
+
+    </div>
+    <!-- /container -->
+
+    <!-- <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSWhsKPYGAMf9cNODX0JnML_b_44H2TCiKtfBA89KqvfPIBriG" alt=""> -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E="
+        crossorigin="anonymous"></script>
+
+</body>
+
+</html>
