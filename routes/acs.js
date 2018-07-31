@@ -2,6 +2,8 @@ const express = require('express')
 const path = require('path')
 const router = express.Router()
 const fetch = require('node-fetch')
+const uuidv1 = require('uuid/v1')
+const fs = require('fs')
 const threeDSSServerData = require('../appData/threeDSServerPData')
 const appData = require('../appData/appInformation')
 const eMessages = require('../mocks-3ds-server/protocolError')
@@ -10,10 +12,94 @@ const rMessages = require('../mocks-3ds-server/rMessages')
 const cMessages = require('../mocks-3ds-server/cMessages')
 const utils = require('../misc/utils')
 
-let DS_URL = ""
+let clients = []
+
+// take the request.body acsTransID as parameter and return the corresponding Areq or null
+let getUserFromTransID = (transID) => {
+
+    for (let i = 0; i < clients.length; i++) {
+        console.log(clients[i]);
+        if (clients[i].aRes.acsTransID === transID) {
+            return clients[i]
+        }
+    }
+    return null
+}
+
+//
+// Starting non module-generic function
+//
+
+router.post('/handleMethodInfo', (request, response) => {
+    if (!request && !request.body && !request.body.threeDSTransID && !request.body.hash) {
+        response.json({ 'status': 'ko' })
+        return
+    }
+
+    let clientData = {}
+    clientData.threeDSTransID = request.body.threeDSTransID
+    clientData.hash = request.body.hash
+    clients.push(clientData)
+
+    response.json({ 'status': 'ok' })
+})
+
+router.post('/getMethodHTML', (request, response) => {
+    
+    
+    if (request.body && request.body.threeDSServerTransID) {
+
+        let fileContent = fs.readFileSync(path.resolve(__dirname + '/../static/fingerPrinter.html'), "utf8")
+        fileContent = fileContent.replace("#!3DS_TRANS_ID!#", request.body.threeDSTransID)
+
+        response.send(fileContent);
+        return
+    }
+    response.send('<p>ERROR</p>')
+})
+
+//
+//  Just return the 3DS Method URL to the DS
+//
+
+router.post('/getmethodurl', (request, response) => {
+
+    // super hard coded because why not
+    if (request) {
+        response.json({ 'threeDSMethodURL': appData.baseUrl + '/acs/getMethodHTML' })
+    }
+})
+
+router.post('/methodinformation', (request, response) => {
+    if (!request.body) {
+        response.json({ 'status': 'ko' })
+        return
+    }
+
+    response.json({ 'status': 'ok' })
+})
+
+// check client side challenge result
+let isChallengeCompleted = (request, client) => {
+
+    console.log(JSON.stringify(request.body));
+
+    //
+    //  Out of PoC scope but takes client to check results
+    //
+
+    if (!request || !request.body || !request.body.sms ||
+        !request.body.password || !request.body.email) {
+        return {
+            'status': 'ko',
+            'message': 'Missing one or more fields in the request'
+        }
+    }
+    return { 'status': 'ok' }
+}
 
 // will be called after the challenge result is validated
-let sendResultRequest = (resultMessage) => {
+let sendResultRequest = (resultMessage, DS_URL) => {
 
     return fetch(DS_URL + '/resulthandler', {
         method: 'POST',
@@ -25,38 +111,29 @@ let sendResultRequest = (resultMessage) => {
     })
         .then((response) => response.json())
         .then((response) => {
-            console.log('response JSONIFIED')
-            console.log(response);
-
             return response
         })
-
 }
 
-let isChallengeCompleted = (request) => {
-
-    console.log(JSON.stringify(request.body));
-    
-    if (!request || !request.body || !request.body.sms ||
-        !request.body.password || !request.body.email) {
-        return {
-            'status': 'ko',
-            'message': 'Missing one or more fields in the request'
-        }
-    }
-    return { 'status': 'ok' }
-}
-
-let doSendCResponse = (oldResponse) => {
+let doSendCResponse = (oldResponse, DS_URL, NOTIFICATION_URL, acsTransID) => {
 
     let Rmessage = rMessages.getRRequest()
-    sendResultRequest(Rmessage)
+    Rmessage.acsTransID = acsTransID
+    sendResultRequest(Rmessage, DS_URL)
         .then((response) => {
-            
+
             let Cres = cMessages.getCResponse()
-            console.log("Result process is DONE");
+            console.log("ACS: RECIEVED RRES, RESULT PROCESS IS DONE:");
             console.log(response);
-            oldResponse.json(response)
+            if (response.resultsStatus == '00') {
+                Cres.notificationURL = NOTIFICATION_URL
+                oldResponse.json(Cres)
+                return
+            }
+            let err = eMessages.getGenericFormatError()
+            err.errorDescription = 'RREQ failed'
+            err.errorMessageType = 'RReq'
+            oldResponse.json(err)
 
             //
             //  TODO do something with rseponse
@@ -68,14 +145,20 @@ let doSendCResponse = (oldResponse) => {
 
 router.post('/challengeresult', (request, response) => {
 
-    let challengeStatus = isChallengeCompleted(request)
-    if (challengeStatus.status !== 'ok') {
-        response.json(challengeStatus)
-        return
-    }
+    let client = getUserFromTransID(request.body.acsTransID)
 
-    console.log("triggered /challengeresult");
-    doSendCResponse(response)
+    if (client != null) {
+        let challengeStatus = isChallengeCompleted(request, client)
+
+        if (challengeStatus.status !== 'ok') {
+            response.json(challengeStatus)
+            return
+        }
+
+        console.log("ACS: RECIEVED THE CHALLENGE SUBMITED FORM, SENDING RREQ:");
+
+        doSendCResponse(response, client.DS_URL, client.NOTIFICATION_URL, client.aRes.acsTransID)
+    }
 
     // set le bon messageStatus pour le result avant de le passer
 })
@@ -92,10 +175,10 @@ let checkUserData = (userData) => {
 
 router.post('/authrequest', (request, response) => {
 
-    aRes = aResponses.getBRWChallengeFlow()
-    eRes = eMessages.getGenericFormatError()
+    let clientData = {}
+    let aRes = aResponses.getBRWChallengeFlow()
+    let eRes = eMessages.getGenericFormatError()
     eRes.errorMessageType = 'ARes'
-    aRes.ascURL = appData.baseUrl + '/acs'
 
     if (request && request.body) {
 
@@ -105,35 +188,59 @@ router.post('/authrequest', (request, response) => {
             return
         }
 
-        DS_URL = request.body.dsURL
+        console.log("ACS: RECIEVED A AREQ:");
+        console.log(request.body);
+
+        // tmp TODO need to die
+
+        clientData.NOTIFICATION_URL = request.body.notificationURL
+        clientData.DS_URL = request.body.dsURL
+        aRes.acsTransID = uuidv1()
+        console.log('ACS UUID => ' + aRes.acsTransID);
+
+
         if (checkUserData(request.body)) {
             aRes.transStatus = "Y"
+            clientData.aRes = aRes
+            clients.push(clientData)
             response.json(aRes)
             return
         } else {
             aRes.transStatus = "C"
-            aRes.acsURL = appData.baseUrl + "/acs/clientchallenge"
+            clientData.aRes = aRes
+            clients.push(clientData)
+            aRes.acsURL = appData.baseUrl + "/acs/providechallenge"
             response.json(aRes)
             return
         }
     }
 
     eRes.errorDescription = 'Request body is empty'
-    response(eRes.json())
+    response.json(eRes)
 
 })
 
+// TODO ERROR HANDLING
 router.post('/providechallenge', (request, response) => {
     if (request && request.body) {
         let content = request.body
-        console.log("at least it reach");
 
-        // if (!appData.checkThreeDSVersion(content.messageVersion)) {
-        //     response('<p>ERROR</p>')
-        // }
-        // response.sendFile('/iframe.html');
-        response.sendFile(path.resolve(__dirname + '/../static/iframe.html'));
-        // response.sendFile(__dirname + '/../static/iframe.html');
+        console.log("ACS: RECIEVED A CREQ, SENDING BACK HTML:");
+        if (!appData.checkThreeDSVersion(content.messageVersion)) {
+            response.send('<p>ERROR</p>')
+            return
+        }
+        currentClient = getUserFromTransID(request.body.acsTransID)
+        if (currentClient != null) {
+            // process what you want to. Maybe send custom challenges
+
+            let fileContent = fs.readFileSync(path.resolve(__dirname + '/../static/iframe.html'), "utf8")
+            fileContent = fileContent.replace("#!ACS_TRANS_ID!#", currentClient.aRes.acsTransID)
+
+            response.send(fileContent);
+            return
+        }
+        response.send('<p>UNKNOW USER</p>')
     }
 
 })

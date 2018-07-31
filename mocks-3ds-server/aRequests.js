@@ -14,7 +14,7 @@ let getARequest = () => {
         "threeDSCompInd": "Y",
         "threeDSRequestorID": "az0123456789",
         "threeDSRequestorName": "threeDSDemonstrator",
-        "threeDSRequestorURL": "localhost:8080/merchant",
+        "threeDSRequestorURL": "localhost:4242/merchant",
         "acquirerBIN": "868491",
         "acquirerMerchantID": "mGm6AJZ1YotkJJmOk0fx",
         "addrMatch": "N",
@@ -28,6 +28,7 @@ let getARequest = () => {
         "billAddrPostCode": "Bill Post Code",
         "billAddrState": "CO",
         "email": "example@example.com",
+        "notificationURL" : 'http://localhost:4242/merchant/notification',
         "homePhone": {
             "cc": "123",
             "subscriber": "123456789"

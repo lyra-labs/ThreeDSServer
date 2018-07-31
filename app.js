@@ -53,15 +53,15 @@ setInterval(threeDSUtils.requestThreeDSServerConfig, 3600000)
 // the next call is a normal one, all the chained actions are only for a testing purpose
 
 threeDSUtils.requestThreeDSServerConfig()
-.then((response) => {
+// .then((response) => {
     
-    console.log(JSON.stringify(response));
-    my_test.testAreq()
-    .then((response) => {
-        // my_test.testRReq()
-    })
+//     console.log(JSON.stringify(response));
+//     my_test.testAreq()
+//     .then((response) => {
+//         // my_test.testRReq()
+//     })
     
-})
+// })
 
 console.log(`Started app on port ${port}`);
 

@@ -1,15 +1,52 @@
 const fetch = require('node-fetch')
 const express = require('express')
+const uuidv1 = require('uuid/v1')
 const router = express.Router()
 const threeDSSServerData = require('../appData/threeDSServerPData')
 const pMessages = require('../mocks-3ds-server/pMessages')
 const eMessages = require('../mocks-3ds-server/protocolError')
 const appData = require('../appData/appInformation')
 
-let URL_3DS_SERVER = ""
+let clients = []
+
+let getUserFromTransID = (transID) => {
+
+    for (let i = 0; i < clients.length; i++) {
+        if (clients[i].aRes.acsTransID === transID) {
+            return clients[i]
+        }
+    }
+    return null
+}
+
+// request to get 3ds method url
+
+let gethreeDSMethodURL = () => {
+    return fetch(appData.baseUrl + '/acs/getmethodurl', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: null
+    })
+        .then((response) => response.json())
+        .then((response) => {
+            return response
+        })
+}
+
+let doGetThreeDSMethodURL = (oldResponse) => {
+
+        gethreeDSMethodURL()
+            .then((response) => {
+                let pRes = pMessages.getPResponse()
+                pRes.cardRangeData[0].threeDSMethodURL = response.threeDSMethodURL
+                oldResponse.json(pRes)
+                return
+            })
+}
 
 // Handle the PReq request and respond with a PRes
-
 router.post('/updatepres', (request, response) => {
 
     let pReq = {}
@@ -23,19 +60,19 @@ router.post('/updatepres', (request, response) => {
             response.json(eRes)
             return
         }
+        console.log("DS: RECIEVED A PREQ:");
+        console.log(JSON.stringify(pReq));
 
-        response.json(pMessages.getPResponse())
+        doGetThreeDSMethodURL(response)
         return
     }
     eRes.errorDescription = 'Missing body'
     response.json(eRes)
 })
 
-
 //
 //  Beginning of Authentication (Areq / Ares) protocole
 //
-
 
 let sendAuthToACS = (AReq) => {
 
@@ -49,22 +86,26 @@ let sendAuthToACS = (AReq) => {
     })
         .then((response) => response.json())
         .then((response) => {
-            console.log('response JSONIFIED')
-            console.log(response);
 
             return response
         })
 }
 
 
-
 // Handle the AReq request and pass it to the ACS
 
-let doSentAuthToACS = (aReq, initialResponse) => {
+let doSentAuthToACS = (aReq, initialResponse, URL_3DS_SERVER) => {
+    let clientData = {}
+    clientData.URL_3DS_SERVER = URL_3DS_SERVER
+
     sendAuthToACS(aReq)
         .then((response) => {
-            console.log("in DS / authrequst");
-            console.log(response);
+
+            response.dsTransID = uuidv1()
+            clientData.aRes = response
+            clients.push(clientData)
+
+            console.log("DS: RECIEVED A ARES, SENDING DIRECTLY TO THE 3DS SERVER");
 
             initialResponse.json(response)
             return
@@ -90,9 +131,9 @@ router.post('/authrequest', (request, response) => {
             response.json(request.body)
         }
 
-        URL_3DS_SERVER = request.body.threeDSServerURL
-        
-        doSentAuthToACS(aReq, response)
+        console.log("DS: RECIEVED A AREQ, SENDING DIRECTLY TO THE ACS");
+
+        doSentAuthToACS(aReq, response, request.body.threeDSServerURL)
         return
 
     }
@@ -105,8 +146,8 @@ router.post('/authrequest', (request, response) => {
 //  Beginning of Result (RReq / RRes) protocole
 //
 
-let sendRRequestToThreeDSServer = (requestContent) => {
-    return fetch(URL_3DS_SERVER + '/result', {
+let sendRRequestToThreeDSServer = (requestContent, client) => {
+    return fetch(client.URL_3DS_SERVER + '/result', {
         method: 'POST',
         credentials: 'none',
         headers: {
@@ -116,20 +157,17 @@ let sendRRequestToThreeDSServer = (requestContent) => {
     })
         .then((response) => response.json())
         .then((response) => {
-            console.log('response from threeDSserver to DS about Result request')
-            console.log(response);
 
             return response
         })
 }
 
-let doSendRRequestToThreeDSServer = (requestContent, oldResponse) => {
+let doSendRRequestToThreeDSServer = (requestContent, oldResponse, client) => {
 
-    sendRRequestToThreeDSServer(requestContent)
+    sendRRequestToThreeDSServer(requestContent, client)
         .then((response) => {
-            console.log('In DS, ResultResponse from 3ds server to ACS');
-            console.log(response);
-            // include checks
+            console.log("DS: RECIEVED A RRES, SENDING DIRECTLY TO THE ACS");
+            // TODO include checks
             oldResponse.json(response)
             return
         })
@@ -152,7 +190,19 @@ router.post('/resulthandler', (request, response) => {
             eRes.errorDescription = 'Bad type'
             response.json(eRes)
         }
-        doSendRRequestToThreeDSServer(request.body, response)
+
+
+        let client = getUserFromTransID(request.body.acsTransID)
+
+        if (client == null) {
+            console.log("DS IN A RREQ CONTEXT: CAN'T FIND USER");
+
+            eRes.errorDescription = "Unknow user"
+            response.json(eRes)
+        }
+
+        console.log("DS: RECIEVED A RREQ, SENDING DIRECTLY TO THE 3DS SERVER");
+        doSendRRequestToThreeDSServer(request.body, response, client)
         return
     }
     eRes.errorDescription = "Empty body"

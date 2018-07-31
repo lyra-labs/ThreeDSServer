@@ -21,6 +21,11 @@ let requestThreeDSServerConfig = () => {
 
                 if (!appData.checkThreeDSVersion(response.messageVersion)) { return { 'status': 'ko' } }
 
+
+                console.log("3DS SERVER: RECIEVED A PRES:");
+                console.log(JSON.stringify(response));
+                
+
                 if (!response.cardRangeData) { // TODO check and log where does it pass
                     appData.data.isCarRanges = false
                     return { 'status': 'ko' }
@@ -62,8 +67,6 @@ let respondChallenge = (aRes, response, what) => {
 
 let respondAuthentified = (aRes, response, what) => {
     let finalResponse = {}
-    console.log('juiu la');
-    
 
     finalResponse.what = what
     finalResponse.data = aRes

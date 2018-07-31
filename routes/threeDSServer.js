@@ -1,6 +1,7 @@
 const fetch = require('node-fetch')
 const express = require('express')
 const router = express.Router()
+const uuidv1 = require('uuid/v1')
 const threeDSSServerData = require('../appData/threeDSServerPData')
 const appData = require('../appData/appInformation')
 const pMessages = require('../mocks-3ds-server/pMessages')
@@ -9,6 +10,8 @@ const eMessages = require('../mocks-3ds-server/protocolError')
 const rMessages = require('../mocks-3ds-server/rMessages')
 const utils = require('../misc/utils')
 const threeDSUtils = require('../misc/threeDSServerUtils')
+
+let clients = []
 
 // lauch AReq to the DS
 let startAuthentication = (aReq) => {
@@ -34,6 +37,7 @@ let getUpdatedAreq = (body) => {
 
     let aReq = aRequests.getARequest()
     aReq.shipAddrCity = body.city_name
+    aReq.email = body.email
     aReq.shipAddrPostCode = body.postcode
     aReq.cardExpiryDate = body.cc_date
     aReq.cardholderName = body.name
@@ -56,9 +60,13 @@ let doStartAuthentication = (updatedAreq, oldResponse) => {
     startAuthentication(updatedAreq)
         .then((response) => response.json())
         .then((response) => {
-            console.log('in 3dsserver response from DS');
 
-            console.log(JSON.stringify(response));
+
+            response.threeDSServerTransID = uuidv1()
+            console.log(response.threeDSServerTransID);
+
+            console.log("3DS SERVER: RECIEVED ARES");
+            console.log(response);
             let authStatus = processAres(response)
             switch (authStatus) {
                 case 'Bad Version':
@@ -85,19 +93,22 @@ let doStartAuthentication = (updatedAreq, oldResponse) => {
 }
 
 router.post('/starttransaction', (request, response) => {
+
     if (!request.body) {
         response.json(utils.jsonError('Missing body in request'))
         return
     }
+
     let updatedAreq = getUpdatedAreq(request.body)
     let PResponseHeader = threeDSSServerData.PResponseHeader
+
+    console.log("3DS SERVER: RECIEVED INITIAL PAYMENT REQUEST FROM MERCHANT");
 
     if (updatedAreq.status === 'ko') { response.json(updatedAreq); return }
     if (!utils.isCreditCardInRange(request.body.cc_number)) { response.json(utils.jsonError('Credit card number is not in 3DS2 range')); return }
     if (!appData.checkThreeDSVersion(updatedAreq.messageVersion)) { response.json(utils.jsonError('Not compatible version')); return }
 
     doStartAuthentication(updatedAreq, response)
-
 })
 
 router.post('/result', (request, response) => {
@@ -113,12 +124,45 @@ router.post('/result', (request, response) => {
             return
         }
 
+        console.log("3DS SERVER: RECIEVED AREQ, CHECKING AND SENDING BACK ARES:");
+        console.log(JSON.stringify(request.body));
+
         (request.body.transStatus === 'Y' || request.body.transStatus === 'A') ? Rres.resultsStatus = '00' : Rres.resultsStatus = '01'
         response.json(Rres)
         return
     }
     eMessage.errorDescription = 'Request failed, missing body'
     response.json(eMessage)
+})
+
+router.post('/getmethod', (request, response) => {
+
+    let methodData = {}
+    methodData.status = 'ok'
+    pRes = threeDSSServerData.PResponseHeader;
+    methodData.threeDSMethodURL = null
+
+    if (!request.body) {
+        response.json({ 'status': 'ko' })
+        return
+    }
+
+    // select the good method url using the cc_number
+    pRes.cardRangeData.forEach(elem => {
+        if (request.body.cc_number >= elem.startRange && request.body.cc_number <= elem.endRange) {
+            methodData.threeDSMethodURL = elem.threeDSMethodURL;
+        }
+    })
+    if (methodData.threeDSMethodURL == null) {
+        response.json({'status':'ko'})
+        return
+    }
+
+    let clientData = {}
+    methodData.threeDSServerTransID = uuidv1()
+    clientData.threeDSServerTransID = methodData.threeDSServerTransID
+    clients.push(clientData)
+    response.json(methodData)
 })
 
 module.exports = router

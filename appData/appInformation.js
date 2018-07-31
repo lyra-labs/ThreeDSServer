@@ -1,7 +1,7 @@
-//
-//  Generic here, should be different and specific in all different servers
-//
+const validator = require('validator')
 
+
+//  Generic here, should be different and specific in all different servers
 let baseUrl = "http://localhost:4242"
 
 let data = {
