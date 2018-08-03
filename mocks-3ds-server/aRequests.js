@@ -11,7 +11,7 @@
 
 let getARequest = () => {
     return {
-        "threeDSCompInd": "Y",
+        "threeDSCompInd": "U",
         "threeDSRequestorID": "az0123456789",
         "threeDSRequestorName": "threeDSDemonstrator",
         "threeDSRequestorURL": "localhost:4242/merchant",

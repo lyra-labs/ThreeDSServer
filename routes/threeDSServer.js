@@ -13,6 +13,15 @@ const threeDSUtils = require('../misc/threeDSServerUtils')
 
 let clients = []
 
+let getUserByThreeDSTransID = (threeDSServerTransID) => {
+    for (let i = 0; i < clients.length; i++) {
+        if (clients[i].threeDSServerTransID === threeDSServerTransID) {
+            return clients[i]
+        }
+    }
+    return null
+}
+
 // lauch AReq to the DS
 let startAuthentication = (aReq) => {
 
@@ -41,10 +50,11 @@ let getUpdatedAreq = (body) => {
     aReq.shipAddrPostCode = body.postcode
     aReq.cardExpiryDate = body.cc_date
     aReq.cardholderName = body.name
+    aReq.threeDSServerTransID = body.threeDSServerTransID
     return aReq
 }
 
-let processAres = (response) => {
+let getAresStatus = (response) => {
 
     if (!appData.checkThreeDSVersion(response.messageVersion)) { return 'Bad Version' }
     if (response.messageType == 'Erro') { return 'Error' }
@@ -61,13 +71,11 @@ let doStartAuthentication = (updatedAreq, oldResponse) => {
         .then((response) => response.json())
         .then((response) => {
 
-
-            response.threeDSServerTransID = uuidv1()
             console.log(response.threeDSServerTransID);
-
             console.log("3DS SERVER: RECIEVED ARES");
             console.log(response);
-            let authStatus = processAres(response)
+
+            let authStatus = getAresStatus(response)
             switch (authStatus) {
                 case 'Bad Version':
                     threeDSUtils.respondWithError('Bad version', oldResponse, authStatus)
@@ -100,7 +108,11 @@ router.post('/starttransaction', (request, response) => {
     }
 
     let updatedAreq = getUpdatedAreq(request.body)
-    let PResponseHeader = threeDSSServerData.PResponseHeader
+    let user = getUserByThreeDSTransID(request.body.threeDSServerTransID)
+    
+    if (user != null && user.isMethodComplete == 'ok') {
+        updatedAreq.threeDSCompInd = 'Y'
+    }
 
     console.log("3DS SERVER: RECIEVED INITIAL PAYMENT REQUEST FROM MERCHANT");
 
@@ -135,6 +147,25 @@ router.post('/result', (request, response) => {
     response.json(eMessage)
 })
 
+router.post('/notificationMethod', (request, response) => {
+    if (!request || !request.body || !request.body.threeDSServerTransID ||
+        !request.body.methodStatus) {
+        response.json({ 'status': 'ko' })
+        return
+    }
+
+
+    clientData = getUserByThreeDSTransID(request.body.threeDSServerTransID)
+    if (clientData) {
+        clientData.isMethodComplete = request.body.methodStatus
+    }
+    console.log("METHOD COMPLETE AND NOTIFICATION RECIEDVED");
+    
+    response.json({'status': 'ok'})
+})
+
+
+// eratat pas besoin de créer l'aReq ici on pourra juste set un boolean sur le client et le set après
 router.post('/getmethod', (request, response) => {
 
     let methodData = {}
@@ -153,13 +184,15 @@ router.post('/getmethod', (request, response) => {
             methodData.threeDSMethodURL = elem.threeDSMethodURL;
         }
     })
+
     if (methodData.threeDSMethodURL == null) {
-        response.json({'status':'ko'})
+        response.json({ 'status': 'ko' })
         return
     }
 
     let clientData = {}
     methodData.threeDSServerTransID = uuidv1()
+    methodData.notificationMethodURL = appData.baseUrl + '/threedsserver/notificationMethod'
     clientData.threeDSServerTransID = methodData.threeDSServerTransID
     clients.push(clientData)
     response.json(methodData)

@@ -34,10 +34,11 @@ let checkPaymentData = (body) => {
         !body.cvv || !body.cc_date ||
         !body.price || !body.name ||
         !body.postcode || !body.city_name ||
-        !body.phone_number || !body.address) {
+        !body.phone_number || !body.address ||
+        !body.threeDSServerTransID) {
         return {
             'status': 'ko',
-            'message': 'missing one or more payment field'
+            'message': 'missing one or more field'
         }
     }
     body.status = 'ok'

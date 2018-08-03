@@ -15,6 +15,7 @@
 
         let toSend = {}
         toSend.threeDSServerTransID = "#!3DS_TRANS_ID!#"
+        toSend.notificationMethodURL = "#!NOTIFICATION_METHOD_URL!#"
 
         let sendFingerPrintToACS = () => {
             return fetch('http://localhost:4242/acs/handleMethodInfo', {
@@ -24,7 +25,7 @@
                 },
                 body: JSON.stringify(toSend)
             })
-            .then((response) => response.json())
+                .then((response) => response.json())
         }
 
         let testFingerPrinter = () => {
@@ -36,8 +37,12 @@
                 toSend.hash = result
                 sendFingerPrintToACS()
                     .then((response) => {
+                        console.log("fingerPrinter end response:");
+                        
                         console.log(response);
-                        // faire le truc qui proc le send message pour fermer l'Iframe et lancer les Areq
+
+                        // tell the client that the process is finished
+                        window.parent.postMessage(response, 'http://localhost:9094');
                     })
             })
         }

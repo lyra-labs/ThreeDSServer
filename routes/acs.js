@@ -15,7 +15,18 @@ const utils = require('../misc/utils')
 let clients = []
 
 // take the request.body acsTransID as parameter and return the corresponding Areq or null
-let getUserFromTransID = (transID) => {
+
+let getUserByThreeDSTransID = (threeDSServerTransID) => {
+    for (let i = 0; i < clients.length; i++) {
+        console.log(clients[i]);
+        if (clients[i].threeDSServerTransID === threeDSServerTransID) {
+            return clients[i]
+        }
+    }
+    return null
+}
+
+let getUserByTransID = (transID) => {
 
     for (let i = 0; i < clients.length; i++) {
         console.log(clients[i]);
@@ -27,30 +38,62 @@ let getUserFromTransID = (transID) => {
 }
 
 //
-// Starting non module-generic function
+// Starting non generic function
 //
 
+let validateMethod = (notificationMethodURL, threeDSServerTransID) => {
+    confirmationRequest = {}
+    confirmationRequest.threeDSServerTransID = threeDSServerTransID
+    confirmationRequest.methodStatus = 'ok'
+
+    return fetch(notificationMethodURL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(confirmationRequest)
+    })
+        .then((response) => response.json())
+        .then((response) => {
+            return response
+        })
+}
+
 router.post('/handleMethodInfo', (request, response) => {
-    if (!request && !request.body && !request.body.threeDSTransID && !request.body.hash) {
+
+    if (!request || !request.body || !request.body.threeDSServerTransID || !request.body.hash ||
+        !request.body.notificationMethodURL) {
         response.json({ 'status': 'ko' })
         return
     }
 
     let clientData = {}
-    clientData.threeDSTransID = request.body.threeDSTransID
+
+    clientData.threeDSServerTransID = request.body.threeDSServerTransID
     clientData.hash = request.body.hash
     clients.push(clientData)
 
-    response.json({ 'status': 'ok' })
+    validateMethod(request.body.notificationMethodURL, request.body.threeDSServerTransID)
+        .then((statusResponse) => {
+            console.log("Yeassa");
+
+            if (statusResponse.status == 'ok') {
+                response.json({ 'status': 'ok' })
+            } else {
+                response.json({ 'status': 'ko' })
+            }
+        })
 })
 
 router.post('/getMethodHTML', (request, response) => {
-    
-    
-    if (request.body && request.body.threeDSServerTransID) {
+
+
+    if (request.body && request.body.threeDSServerTransID && request.body.notificationMethodURL) {
 
         let fileContent = fs.readFileSync(path.resolve(__dirname + '/../static/fingerPrinter.html'), "utf8")
-        fileContent = fileContent.replace("#!3DS_TRANS_ID!#", request.body.threeDSTransID)
+        fileContent = fileContent
+            .replace("#!3DS_TRANS_ID!#", request.body.threeDSServerTransID)
+            .replace("#!NOTIFICATION_METHOD_URL!#", request.body.notificationMethodURL)
 
         response.send(fileContent);
         return
@@ -145,7 +188,7 @@ let doSendCResponse = (oldResponse, DS_URL, NOTIFICATION_URL, acsTransID) => {
 
 router.post('/challengeresult', (request, response) => {
 
-    let client = getUserFromTransID(request.body.acsTransID)
+    let client = getUserByTransID(request.body.acsTransID)
 
     if (client != null) {
         let challengeStatus = isChallengeCompleted(request, client)
@@ -173,9 +216,12 @@ let checkUserData = (userData) => {
     return false
 }
 
+let useMethodHashTheWayYouWant = (clientHash) => {
+    return true
+}
+
 router.post('/authrequest', (request, response) => {
 
-    let clientData = {}
     let aRes = aResponses.getBRWChallengeFlow()
     let eRes = eMessages.getGenericFormatError()
     eRes.errorMessageType = 'ARes'
@@ -188,6 +234,11 @@ router.post('/authrequest', (request, response) => {
             return
         }
 
+        let clientData = getUserByThreeDSTransID(request.body.threeDSServerTransID)
+
+
+        useMethodHashTheWayYouWant(clientData.hash)
+
         console.log("ACS: RECIEVED A AREQ:");
         console.log(request.body);
 
@@ -196,19 +247,18 @@ router.post('/authrequest', (request, response) => {
         clientData.NOTIFICATION_URL = request.body.notificationURL
         clientData.DS_URL = request.body.dsURL
         aRes.acsTransID = uuidv1()
+        aRes.threeDSServerTransID = clientData.threeDSServerTransID
         console.log('ACS UUID => ' + aRes.acsTransID);
 
 
         if (checkUserData(request.body)) {
             aRes.transStatus = "Y"
             clientData.aRes = aRes
-            clients.push(clientData)
             response.json(aRes)
             return
         } else {
             aRes.transStatus = "C"
             clientData.aRes = aRes
-            clients.push(clientData)
             aRes.acsURL = appData.baseUrl + "/acs/providechallenge"
             response.json(aRes)
             return
@@ -230,7 +280,7 @@ router.post('/providechallenge', (request, response) => {
             response.send('<p>ERROR</p>')
             return
         }
-        currentClient = getUserFromTransID(request.body.acsTransID)
+        currentClient = getUserByTransID(request.body.acsTransID)
         if (currentClient != null) {
             // process what you want to. Maybe send custom challenges
 
