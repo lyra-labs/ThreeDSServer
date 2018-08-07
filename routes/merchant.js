@@ -6,10 +6,6 @@ const uuidv1 = require('uuid/v1')
 
 let clients = []
 
-//
-//  Supposed to handler IDs for notification URL, not useless for this PoC
-//
-
 // Call the 3DS Server to initiate transaction
 let startThreeDSProtocole = (formBody) => {
     return fetch(appData.baseUrl + '/threedsserver/starttransaction', {

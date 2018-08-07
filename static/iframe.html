@@ -44,6 +44,7 @@
             form_data.password = $('#inputPassword').val()
             form_data.sms = $('#inputSMS').val()
             form_data.acsTransID = "#!ACS_TRANS_ID!#"
+            form_data.threeDSServerTransID = "#!3DS_TRANS_ID!#"
 
             if (!isEmail(form_data.email)) {
                 console.log('email not valid');
@@ -103,7 +104,6 @@
     </div>
     <!-- /container -->
 
-    <!-- <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSWhsKPYGAMf9cNODX0JnML_b_44H2TCiKtfBA89KqvfPIBriG" alt=""> -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E="
         crossorigin="anonymous"></script>
 

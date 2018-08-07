@@ -6,21 +6,15 @@ const threeDSSServerData = require('../appData/threeDSServerPData')
 const pMessages = require('../mocks-3ds-server/pMessages')
 const eMessages = require('../mocks-3ds-server/protocolError')
 const appData = require('../appData/appInformation')
+const search = require('../routes_process/researchFunctions')
 
 let clients = []
 
-let getUserFromTransID = (transID) => {
+//
+//  Preparation protocol Pres / Preq
+//
 
-    for (let i = 0; i < clients.length; i++) {
-        if (clients[i].aRes.acsTransID === transID) {
-            return clients[i]
-        }
-    }
-    return null
-}
-
-// request to get 3ds method url
-
+// request the ACS to get 3ds method url
 let gethreeDSMethodURL = () => {
     return fetch(appData.baseUrl + '/acs/getmethodurl', {
         method: 'POST',
@@ -35,15 +29,16 @@ let gethreeDSMethodURL = () => {
         })
 }
 
+// return the Pres to the 3DSServer
 let doGetThreeDSMethodURL = (oldResponse) => {
 
-        gethreeDSMethodURL()
-            .then((response) => {
-                let pRes = pMessages.getPResponse()
-                pRes.cardRangeData[0].threeDSMethodURL = response.threeDSMethodURL
-                oldResponse.json(pRes)
-                return
-            })
+    gethreeDSMethodURL()
+        .then((response) => {
+            let pRes = pMessages.getPResponse()
+            pRes.cardRangeData[0].threeDSMethodURL = response.threeDSMethodURL
+            oldResponse.json(pRes)
+            return
+        })
 }
 
 // Handle the PReq request and respond with a PRes
@@ -114,7 +109,6 @@ let doSentAuthToACS = (aReq, initialResponse, URL_3DS_SERVER) => {
 }
 
 // Handle the Areq from 3ds server
-
 router.post('/authrequest', (request, response) => {
 
     let eRes = eMessages.getGenericFormatError
@@ -167,12 +161,16 @@ let doSendRRequestToThreeDSServer = (requestContent, oldResponse, client) => {
     sendRRequestToThreeDSServer(requestContent, client)
         .then((response) => {
             console.log("DS: RECIEVED A RRES, SENDING DIRECTLY TO THE ACS");
-            // TODO include checks
+
+            // free the client from the list
+            let clientData = search.getUserByTransID(response.acsTransID, clients)
+            let index = clients.indexOf(clientData)
+            if (index != -1) { clients.splice(index, 1) }
+
             oldResponse.json(response)
             return
         })
         .catch((error) => console.log('error in DS resultResponse : ' + error))
-
 }
 
 router.post('/resulthandler', (request, response) => {
@@ -191,8 +189,7 @@ router.post('/resulthandler', (request, response) => {
             response.json(eRes)
         }
 
-
-        let client = getUserFromTransID(request.body.acsTransID)
+        let client = search.getUserByTransID(request.body.acsTransID, clients)
 
         if (client == null) {
             console.log("DS IN A RREQ CONTEXT: CAN'T FIND USER");

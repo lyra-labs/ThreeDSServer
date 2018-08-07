@@ -6,7 +6,7 @@ const path = require('path')
 
 const config = require('./config.json')
 const threeDSData = require('./appData/threeDSServerPData')
-const threeDSUtils = require('./misc/threeDSServerUtils')
+const threeDSUtils = require('./routes_process/threeDSServerUtils')
 
 const DSroute = require('./routes/ds')
 const ACSroute = require('./routes/acs')
@@ -50,18 +50,7 @@ my_test.testForAlex()
 // call at server application startup and every 1h (3600000 millisecond)
 setInterval(threeDSUtils.requestThreeDSServerConfig, 3600000)
 
-// the next call is a normal one, all the chained actions are only for a testing purpose
-
 threeDSUtils.requestThreeDSServerConfig()
-// .then((response) => {
-    
-//     console.log(JSON.stringify(response));
-//     my_test.testAreq()
-//     .then((response) => {
-//         // my_test.testRReq()
-//     })
-    
-// })
 
 console.log(`Started app on port ${port}`);
 

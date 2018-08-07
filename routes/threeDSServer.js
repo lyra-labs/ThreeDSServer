@@ -8,51 +8,17 @@ const pMessages = require('../mocks-3ds-server/pMessages')
 const aRequests = require('../mocks-3ds-server/aRequests')
 const eMessages = require('../mocks-3ds-server/protocolError')
 const rMessages = require('../mocks-3ds-server/rMessages')
-const utils = require('../misc/utils')
-const threeDSUtils = require('../misc/threeDSServerUtils')
+const utils = require('../routes_process/utils')
+const threeDSUtils = require('../routes_process/threeDSServerUtils')
+const search = require('../routes_process/researchFunctions')
 
+//list of clients currently processing
 let clients = []
 
-let getUserByThreeDSTransID = (threeDSServerTransID) => {
-    for (let i = 0; i < clients.length; i++) {
-        if (clients[i].threeDSServerTransID === threeDSServerTransID) {
-            return clients[i]
-        }
-    }
-    return null
-}
 
-// lauch AReq to the DS
-let startAuthentication = (aReq) => {
-
-    return threeDSSServerData.AResponseHeader = fetch(appData.baseUrl + '/ds/authrequest', {
-        method: 'POST',
-        credentials: 'none',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(aReq)
-    })
-}
-
-let getUpdatedAreq = (body) => {
-    if (!body.cc_number || !body.email ||
-        !body.cvv || !body.cc_date ||
-        !body.price || !body.name ||
-        !body.postcode || !body.city_name ||
-        !body.phone_number || !body.address) {
-        return (utils.jsonError('Missing a field in request'))
-    }
-
-    let aReq = aRequests.getARequest()
-    aReq.shipAddrCity = body.city_name
-    aReq.email = body.email
-    aReq.shipAddrPostCode = body.postcode
-    aReq.cardExpiryDate = body.cc_date
-    aReq.cardholderName = body.name
-    aReq.threeDSServerTransID = body.threeDSServerTransID
-    return aReq
-}
+//
+//  Start of the protocole AREQ / ARES
+//
 
 let getAresStatus = (response) => {
 
@@ -65,15 +31,30 @@ let getAresStatus = (response) => {
     else { return 'Error' }
 }
 
+let startAuthentication = (aReq) => {
+
+    return threeDSSServerData.AResponseHeader = fetch(appData.baseUrl + '/ds/authrequest', {
+        method: 'POST',
+        credentials: 'none',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(aReq)
+    })
+}
+
 let doStartAuthentication = (updatedAreq, oldResponse) => {
 
     startAuthentication(updatedAreq)
         .then((response) => response.json())
         .then((response) => {
 
-            console.log(response.threeDSServerTransID);
             console.log("3DS SERVER: RECIEVED ARES");
             console.log(response);
+
+            if (!response.threeDSServerTransID) {
+                response.threeDSServerTransID = uuidv1()
+            }
 
             let authStatus = getAresStatus(response)
             switch (authStatus) {
@@ -100,6 +81,27 @@ let doStartAuthentication = (updatedAreq, oldResponse) => {
         .catch((error) => console.log('threeDSServer post to ds/authrequest error: ' + error))
 }
 
+// update AReq with merchant data
+let getUpdatedAreq = (body) => {
+    if (!body.cc_number || !body.email ||
+        !body.cvv || !body.cc_date ||
+        !body.price || !body.name ||
+        !body.postcode || !body.city_name ||
+        !body.phone_number || !body.address) {
+        return (utils.jsonError('Missing a field in request'))
+    }
+
+    let aReq = aRequests.getARequest()
+    aReq.shipAddrCity = body.city_name
+    aReq.email = body.email
+    aReq.shipAddrPostCode = body.postcode
+    aReq.cardExpiryDate = body.cc_date
+    aReq.cardholderName = body.name
+    aReq.threeDSServerTransID = body.threeDSServerTransID
+    return aReq
+}
+
+// handle the merchant request starting the protocole
 router.post('/starttransaction', (request, response) => {
 
     if (!request.body) {
@@ -108,8 +110,8 @@ router.post('/starttransaction', (request, response) => {
     }
 
     let updatedAreq = getUpdatedAreq(request.body)
-    let user = getUserByThreeDSTransID(request.body.threeDSServerTransID)
-    
+    let user = search.getUserByThreeDSTransID(request.body.threeDSServerTransID, clients)
+
     if (user != null && user.isMethodComplete == 'ok') {
         updatedAreq.threeDSCompInd = 'Y'
     }
@@ -122,6 +124,10 @@ router.post('/starttransaction', (request, response) => {
 
     doStartAuthentication(updatedAreq, response)
 })
+
+//
+// Handle the RREq and return a RREs
+//
 
 router.post('/result', (request, response) => {
 
@@ -140,6 +146,12 @@ router.post('/result', (request, response) => {
         console.log(JSON.stringify(request.body));
 
         (request.body.transStatus === 'Y' || request.body.transStatus === 'A') ? Rres.resultsStatus = '00' : Rres.resultsStatus = '01'
+
+        // clean up the user from the clients list (it is the last times it is used by this server)
+        let userTosuppr = search.getUserByThreeDSTransID(request.body.threeDSServerTransID, clients)
+        let index = clients.indexOf(userTosuppr)
+        if (index != -1) { clients.splice(index, 1) }
+
         response.json(Rres)
         return
     }
@@ -147,6 +159,9 @@ router.post('/result', (request, response) => {
     response.json(eMessage)
 })
 
+//
+// Handle the 3DS Method Notification request and set methodStatus to 'Y' if OK
+//
 router.post('/notificationMethod', (request, response) => {
     if (!request || !request.body || !request.body.threeDSServerTransID ||
         !request.body.methodStatus) {
@@ -155,17 +170,20 @@ router.post('/notificationMethod', (request, response) => {
     }
 
 
-    clientData = getUserByThreeDSTransID(request.body.threeDSServerTransID)
+    clientData = search.getUserByThreeDSTransID(request.body.threeDSServerTransID, clients)
     if (clientData) {
         clientData.isMethodComplete = request.body.methodStatus
     }
     console.log("METHOD COMPLETE AND NOTIFICATION RECIEDVED");
-    
-    response.json({'status': 'ok'})
+
+    response.json({ 'status': 'ok' })
 })
 
 
-// eratat pas besoin de créer l'aReq ici on pourra juste set un boolean sur le client et le set après
+//
+// Provide the 3DSMethodUrl, the 3DSMethodNotificationURl and the ThreeDSServerTransID to the requestor
+//
+
 router.post('/getmethod', (request, response) => {
 
     let methodData = {}

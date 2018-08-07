@@ -10,37 +10,26 @@ const eMessages = require('../mocks-3ds-server/protocolError')
 const aResponses = require('../mocks-3ds-server/aResponses')
 const rMessages = require('../mocks-3ds-server/rMessages')
 const cMessages = require('../mocks-3ds-server/cMessages')
-const utils = require('../misc/utils')
+const utils = require('../routes_process/utils')
+const acsProcessor = require('../routes_process/acsDataProcess')
+const search = require('../routes_process/researchFunctions')
 
+// list of the clients
 let clients = []
 
-// take the request.body acsTransID as parameter and return the corresponding Areq or null
-
-let getUserByThreeDSTransID = (threeDSServerTransID) => {
-    for (let i = 0; i < clients.length; i++) {
-        console.log(clients[i]);
-        if (clients[i].threeDSServerTransID === threeDSServerTransID) {
-            return clients[i]
-        }
-    }
-    return null
-}
-
-let getUserByTransID = (transID) => {
-
-    for (let i = 0; i < clients.length; i++) {
-        console.log(clients[i]);
-        if (clients[i].aRes.acsTransID === transID) {
-            return clients[i]
-        }
-    }
-    return null
-}
-
 //
-// Starting non generic function
+// Components of the 3DS Method
 //
 
+//  Just return the 3DS Method URL to the DS (Part of the Preq-Pres exchange)
+router.post('/getmethodurl', (request, response) => {
+    if (request) {
+        response.json({ 'threeDSMethodURL': appData.baseUrl + '/acs/getMethodHTML' });
+    }
+});
+
+
+// Send the validation the the 3DS Method Notification URL
 let validateMethod = (notificationMethodURL, threeDSServerTransID) => {
     confirmationRequest = {}
     confirmationRequest.threeDSServerTransID = threeDSServerTransID
@@ -59,6 +48,7 @@ let validateMethod = (notificationMethodURL, threeDSServerTransID) => {
         })
 }
 
+// recieve the data from the 3DS method Iframe, store it, and initiate validation to the 3DS Server
 router.post('/handleMethodInfo', (request, response) => {
 
     if (!request || !request.body || !request.body.threeDSServerTransID || !request.body.hash ||
@@ -85,6 +75,7 @@ router.post('/handleMethodInfo', (request, response) => {
         })
 })
 
+// Send back the HTML file containing the challenge that must be displayed in the Iframe 
 router.post('/getMethodHTML', (request, response) => {
 
 
@@ -102,44 +93,8 @@ router.post('/getMethodHTML', (request, response) => {
 })
 
 //
-//  Just return the 3DS Method URL to the DS
+// Challenge part, It recieve the challenge result from the Iframe
 //
-
-router.post('/getmethodurl', (request, response) => {
-
-    // super hard coded because why not
-    if (request) {
-        response.json({ 'threeDSMethodURL': appData.baseUrl + '/acs/getMethodHTML' })
-    }
-})
-
-router.post('/methodinformation', (request, response) => {
-    if (!request.body) {
-        response.json({ 'status': 'ko' })
-        return
-    }
-
-    response.json({ 'status': 'ok' })
-})
-
-// check client side challenge result
-let isChallengeCompleted = (request, client) => {
-
-    console.log(JSON.stringify(request.body));
-
-    //
-    //  Out of PoC scope but takes client to check results
-    //
-
-    if (!request || !request.body || !request.body.sms ||
-        !request.body.password || !request.body.email) {
-        return {
-            'status': 'ko',
-            'message': 'Missing one or more fields in the request'
-        }
-    }
-    return { 'status': 'ok' }
-}
 
 // will be called after the challenge result is validated
 let sendResultRequest = (resultMessage, DS_URL) => {
@@ -158,68 +113,87 @@ let sendResultRequest = (resultMessage, DS_URL) => {
         })
 }
 
-let doSendCResponse = (oldResponse, DS_URL, NOTIFICATION_URL, acsTransID) => {
+let doSendRequestAndReturnCResponse = (oldResponse, DS_URL, NOTIFICATION_URL, acsTransID, threeDSServerTransID) => {
 
     let Rmessage = rMessages.getRRequest()
     Rmessage.acsTransID = acsTransID
+    Rmessage.threeDSServerTransID = threeDSServerTransID
     sendResultRequest(Rmessage, DS_URL)
         .then((response) => {
 
             let Cres = cMessages.getCResponse()
+            let userData = search.getUserByTransID(acsTransID, clients)
+            let index = clients.indexOf(acsTransID)
             console.log("ACS: RECIEVED RRES, RESULT PROCESS IS DONE:");
             console.log(response);
             if (response.resultsStatus == '00') {
                 Cres.notificationURL = NOTIFICATION_URL
+                if (index != -1) { clients.splice(index, 1) }
                 oldResponse.json(Cres)
                 return
             }
             let err = eMessages.getGenericFormatError()
             err.errorDescription = 'RREQ failed'
             err.errorMessageType = 'RReq'
+            if (index != -1) { clients.splice(index, 1) }
             oldResponse.json(err)
 
-            //
-            //  TODO do something with rseponse
-            // after my brain triggered, probably nothing for a demo
-            // the real bank interaction start here
-            //
+            // END OF PROCESS FOR ACS
+
         })
 }
 
+// Handle the result of the Creq challenge
 router.post('/challengeresult', (request, response) => {
 
-    let client = getUserByTransID(request.body.acsTransID)
+    let client = search.getUserByTransID(request.body.acsTransID, clients)
 
     if (client != null) {
-        let challengeStatus = isChallengeCompleted(request, client)
+        let challengeStatus = acsProcessor.isChallengeCompleted(request, client)
 
         if (challengeStatus.status !== 'ok') {
             response.json(challengeStatus)
             return
         }
-
         console.log("ACS: RECIEVED THE CHALLENGE SUBMITED FORM, SENDING RREQ:");
-
-        doSendCResponse(response, client.DS_URL, client.NOTIFICATION_URL, client.aRes.acsTransID)
+        doSendRequestAndReturnCResponse(response, client.DS_URL, client.NOTIFICATION_URL, client.aRes.acsTransID, request.body.threeDSServerTransID)
     }
 
     // set le bon messageStatus pour le result avant de le passer
 })
 
+// return as a HTML file the challenge to the requestor, take a CReq as request param
+router.post('/providechallenge', (request, response) => {
+    if (request && request.body) {
+        let content = request.body
+
+        console.log("ACS: RECIEVED A CREQ, SENDING BACK HTML:");
+        if (!appData.checkThreeDSVersion(content.messageVersion)) {
+            response.send('<p>ERROR</p>')
+            return
+        }
+        currentClient = search.getUserByTransID(request.body.acsTransID, clients)
+        if (currentClient != null) {
+            // process what you want to. Maybe send custom challenges
+
+            let fileContent = fs.readFileSync(path.resolve(__dirname + '/../static/iframe.html'), "utf8")
+            fileContent = fileContent.replace("#!ACS_TRANS_ID!#", currentClient.aRes.acsTransID)
+                .replace('#!3DS_TRANS_ID!#', request.body.threeDSServerTransID)
+
+            response.send(fileContent);
+            return
+        }
+        response.send('<p>UNKNOW USER</p>')
+    }
+
+})
 
 //
 //  Handler the Authentication part as ACS
 //
 
-//handle the verification process
-let checkUserData = (userData) => {
-    return false
-}
-
-let useMethodHashTheWayYouWant = (clientHash) => {
-    return true
-}
-
+// take a Areq and return a AREs
+// can perform analysis with the 3DS Method browser HASH
 router.post('/authrequest', (request, response) => {
 
     let aRes = aResponses.getBRWChallengeFlow()
@@ -234,65 +208,43 @@ router.post('/authrequest', (request, response) => {
             return
         }
 
-        let clientData = getUserByThreeDSTransID(request.body.threeDSServerTransID)
+        let clientData = search.getUserByThreeDSTransID(request.body.threeDSServerTransID, clients)
+        if (!clientData) {
+            clientData = {}
+        }
 
-
-        useMethodHashTheWayYouWant(clientData.hash)
+        acsProcessor.useMethodHashTheWayYouWant(clientData.hash)
 
         console.log("ACS: RECIEVED A AREQ:");
         console.log(request.body);
-
-        // tmp TODO need to die
 
         clientData.NOTIFICATION_URL = request.body.notificationURL
         clientData.DS_URL = request.body.dsURL
         aRes.acsTransID = uuidv1()
         aRes.threeDSServerTransID = clientData.threeDSServerTransID
-        console.log('ACS UUID => ' + aRes.acsTransID);
 
-
-        if (checkUserData(request.body)) {
+        if (acsProcessor.checkUserData(request.body)) {
             aRes.transStatus = "Y"
             clientData.aRes = aRes
+            if (!clientData.threeDSServerTransID) { clients.push() }
             response.json(aRes)
             return
         } else {
             aRes.transStatus = "C"
             clientData.aRes = aRes
+            // Set the challenge mode if the analyser ask for it
             aRes.acsURL = appData.baseUrl + "/acs/providechallenge"
+
+            if (!clientData.threeDSServerTransID) {
+                clients.push(clientData)
+            }
             response.json(aRes)
             return
         }
     }
-
     eRes.errorDescription = 'Request body is empty'
     response.json(eRes)
-
 })
 
-// TODO ERROR HANDLING
-router.post('/providechallenge', (request, response) => {
-    if (request && request.body) {
-        let content = request.body
-
-        console.log("ACS: RECIEVED A CREQ, SENDING BACK HTML:");
-        if (!appData.checkThreeDSVersion(content.messageVersion)) {
-            response.send('<p>ERROR</p>')
-            return
-        }
-        currentClient = getUserByTransID(request.body.acsTransID)
-        if (currentClient != null) {
-            // process what you want to. Maybe send custom challenges
-
-            let fileContent = fs.readFileSync(path.resolve(__dirname + '/../static/iframe.html'), "utf8")
-            fileContent = fileContent.replace("#!ACS_TRANS_ID!#", currentClient.aRes.acsTransID)
-
-            response.send(fileContent);
-            return
-        }
-        response.send('<p>UNKNOW USER</p>')
-    }
-
-})
 
 module.exports = router
