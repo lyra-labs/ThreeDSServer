@@ -17,12 +17,9 @@ let requestThreeDSServerConfig = () => {
         .then((response) => response.json())
         .then((response) => {
             if (response) {
-                console.log(JSON.stringify(response));
-
                 if (!appData.checkThreeDSVersion(response.messageVersion)) { return { 'status': 'ko' } }
 
-
-                console.log("3DS SERVER: RECIEVED A PRES:");
+                console.log("\n3DS SERVER: RECIEVED A PRES:");
                 console.log(JSON.stringify(response));
                 
 

@@ -3,12 +3,13 @@ const express = require('express')
 const router = express.Router()
 const appData = require('../appData/appInformation')
 const uuidv1 = require('uuid/v1')
+const search = require('../routes_process/researchFunctions')
 
 let clients = []
 
 // Call the 3DS Server to initiate transaction
 let startThreeDSProtocole = (formBody) => {
-    return fetch(appData.baseUrl + '/threedsserver/starttransaction', {
+    return fetch(appData.baseUrl + '/threedsserver/waitMethod', {
         method: 'POST',
         credentials: 'none',
         headers: {
@@ -51,7 +52,7 @@ let doStartThreeDSProtocole = (checkeddData, oldResponse) => {
             console.log("Return of startThreeDSProtocol from merchant.js");
             console.log(JSON.stringify(response))
             clientData.data = response
-            clients.push(clientData)
+            // clients.push(clientData)
 
             oldResponse.json(response)
             // what contain the context of the response
@@ -62,7 +63,6 @@ let doStartThreeDSProtocole = (checkeddData, oldResponse) => {
 
 // Initial request sent by client side
 router.post('/pay', (request, response) => {
-
 
     if (!request || !request.body) {
         response.json({
@@ -83,6 +83,19 @@ router.post('/pay', (request, response) => {
     doStartThreeDSProtocole(checkeddData, response)
 })
 
+// save the response for afterCres confirmation
+router.post('/requestConfirmation', (request, response) => {
+    if (!request || !request.body) {
+        response.json({ 'status': 'ko' })
+        return
+    }
+    let userData = {}
+    userData.acsTransID = request.body.acsTransID
+    userData.confirmationResponse = response
+    clients.push(userData)
+    return
+})
+
 // Unused handler, the very end of the 3DS 2.1 protocole on my scope
 router.post('/notification', (request, response) => {
     if (!request && !request.body) {
@@ -95,7 +108,15 @@ router.post('/notification', (request, response) => {
         return
     }
 
-    console.log('NOTIFICATION: RECIEVED');
+    console.log('\nNOTIFICATION: RECIEVED: CRES :');
+
+    console.log(request.body);
+    
+    let userData = search.getUserWithoutAresByTransID(request.body.acsTransID, clients)
+    if (userData != null) {
+        userData.confirmationResponse.json({ 'status': 'authentified' })
+    }
+
     response.json({
         'status': 'ok',
         'message': 'ok'
@@ -115,20 +136,21 @@ let doGet3DSMethod = (cc_number) => {
         },
         body: JSON.stringify(cc_number)
     }).then((response) => response.json())
-    .then((response) => response)
+        .then((response) => response)
 }
+
 
 //handler the 3dsmethod client side initial request
 router.post('/init', (request, response) => {
     if (!request.body) {
-        response.json({'status':'ko'})
+        response.json({ 'status': 'ko' })
         return
     }
     doGet3DSMethod(request.body)
-    .then((threeDSMethodInfo) => {
-        response.json(threeDSMethodInfo)
-        return
-    })
+        .then((threeDSMethodInfo) => {
+            response.json(threeDSMethodInfo)
+            return
+        })
 
 })
 

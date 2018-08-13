@@ -20,6 +20,17 @@
         return regex.test(email);
     }
 
+    let sendCresToNotificationURL = (cRes) => {
+
+        fetch(cRes.notificationURL, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(cRes)
+        })
+    }
+
     let sendChallInputToACS = (form_data) => {
         return fetch('http://localhost:4242/acs/challengeresult', {
             method: 'POST',
@@ -60,10 +71,10 @@
                         $('#info-form').hide();
                         $('#success_pay').show();
 
-                        window.parent.postMessage(response, 'http://localhost:9094');
+                        // will send CRes
+                        sendCresToNotificationURL(response)
 
                     }
-
                 })
         })
 

@@ -32,18 +32,9 @@
             new Fingerprint2().get(function (result, components) {
                 console.log(result) // a hash, representing your device fingerprint
                 console.log(components) // an array of FP components
-                console.log(toSend.threeDSServerTransID);
 
                 toSend.hash = result
                 sendFingerPrintToACS()
-                    .then((response) => {
-                        console.log("fingerPrinter end response:");
-                        
-                        console.log(response);
-
-                        // tell the client that the process is finished
-                        window.parent.postMessage(response, 'http://localhost:9094');
-                    })
             })
         }
 

@@ -17,6 +17,8 @@ const threeDSroute = require('./routes/threeDSServer')
 
 const my_test = require('./test')
 
+//9095
+
 const app = express()
 const port = config.port;
 
@@ -46,7 +48,8 @@ if (process.argv[2] && process.argv[2] === 'https') {
     app.listen(port)
 }
 
-my_test.testForAlex()
+// my_test.testForAlex()
+
 // call at server application startup and every 1h (3600000 millisecond)
 setInterval(threeDSUtils.requestThreeDSServerConfig, 3600000)
 

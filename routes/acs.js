@@ -65,7 +65,6 @@ router.post('/handleMethodInfo', (request, response) => {
 
     validateMethod(request.body.notificationMethodURL, request.body.threeDSServerTransID)
         .then((statusResponse) => {
-            console.log("Yeassa");
 
             if (statusResponse.status == 'ok') {
                 response.json({ 'status': 'ok' })
@@ -122,9 +121,11 @@ let doSendRequestAndReturnCResponse = (oldResponse, DS_URL, NOTIFICATION_URL, ac
         .then((response) => {
 
             let Cres = cMessages.getCResponse()
+            Cres.threeDSServerTransID = threeDSServerTransID
+            Cres.acsTransID = acsTransID
             let userData = search.getUserByTransID(acsTransID, clients)
             let index = clients.indexOf(acsTransID)
-            console.log("ACS: RECIEVED RRES, RESULT PROCESS IS DONE:");
+            console.log("\nACS: RECIEVED RRES, RESULT PROCESS IS DONE:");
             console.log(response);
             if (response.resultsStatus == '00') {
                 Cres.notificationURL = NOTIFICATION_URL
@@ -155,7 +156,7 @@ router.post('/challengeresult', (request, response) => {
             response.json(challengeStatus)
             return
         }
-        console.log("ACS: RECIEVED THE CHALLENGE SUBMITED FORM, SENDING RREQ:");
+        console.log("\nACS: RECIEVED THE CHALLENGE SUBMITED FORM, SENDING RREQ:");
         doSendRequestAndReturnCResponse(response, client.DS_URL, client.NOTIFICATION_URL, client.aRes.acsTransID, request.body.threeDSServerTransID)
     }
 
@@ -167,7 +168,7 @@ router.post('/providechallenge', (request, response) => {
     if (request && request.body) {
         let content = request.body
 
-        console.log("ACS: RECIEVED A CREQ, SENDING BACK HTML:");
+        console.log("\nACS: RECIEVED A CREQ, SENDING BACK HTML:");
         if (!appData.checkThreeDSVersion(content.messageVersion)) {
             response.send('<p>ERROR</p>')
             return
@@ -215,7 +216,7 @@ router.post('/authrequest', (request, response) => {
 
         acsProcessor.useMethodHashTheWayYouWant(clientData.hash)
 
-        console.log("ACS: RECIEVED A AREQ:");
+        console.log("\nACS: RECIEVED A AREQ:");
         console.log(request.body);
 
         clientData.NOTIFICATION_URL = request.body.notificationURL

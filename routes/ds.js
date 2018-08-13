@@ -55,7 +55,7 @@ router.post('/updatepres', (request, response) => {
             response.json(eRes)
             return
         }
-        console.log("DS: RECIEVED A PREQ:");
+        console.log("\nDS: RECIEVED A PREQ:");
         console.log(JSON.stringify(pReq));
 
         doGetThreeDSMethodURL(response)
@@ -100,7 +100,7 @@ let doSentAuthToACS = (aReq, initialResponse, URL_3DS_SERVER) => {
             clientData.aRes = response
             clients.push(clientData)
 
-            console.log("DS: RECIEVED A ARES, SENDING DIRECTLY TO THE 3DS SERVER");
+            console.log("\nDS: RECIEVED A ARES, SENDING DIRECTLY TO THE 3DS SERVER");
 
             initialResponse.json(response)
             return
@@ -125,7 +125,7 @@ router.post('/authrequest', (request, response) => {
             response.json(request.body)
         }
 
-        console.log("DS: RECIEVED A AREQ, SENDING DIRECTLY TO THE ACS");
+        console.log("\nDS: RECIEVED A AREQ, SENDING DIRECTLY TO THE ACS");
 
         doSentAuthToACS(aReq, response, request.body.threeDSServerURL)
         return
@@ -160,7 +160,7 @@ let doSendRRequestToThreeDSServer = (requestContent, oldResponse, client) => {
 
     sendRRequestToThreeDSServer(requestContent, client)
         .then((response) => {
-            console.log("DS: RECIEVED A RRES, SENDING DIRECTLY TO THE ACS");
+            console.log("\nDS: RECIEVED A RRES, SENDING DIRECTLY TO THE ACS");
 
             // free the client from the list
             let clientData = search.getUserByTransID(response.acsTransID, clients)
@@ -192,13 +192,13 @@ router.post('/resulthandler', (request, response) => {
         let client = search.getUserByTransID(request.body.acsTransID, clients)
 
         if (client == null) {
-            console.log("DS IN A RREQ CONTEXT: CAN'T FIND USER");
+            console.log("\nDS IN A RREQ CONTEXT: CAN'T FIND USER");
 
             eRes.errorDescription = "Unknow user"
             response.json(eRes)
         }
 
-        console.log("DS: RECIEVED A RREQ, SENDING DIRECTLY TO THE 3DS SERVER");
+        console.log("\nDS: RECIEVED A RREQ, SENDING DIRECTLY TO THE 3DS SERVER");
         doSendRRequestToThreeDSServer(request.body, response, client)
         return
     }

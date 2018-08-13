@@ -15,7 +15,6 @@ const search = require('../routes_process/researchFunctions')
 //list of clients currently processing
 let clients = []
 
-
 //
 //  Start of the protocole AREQ / ARES
 //
@@ -35,7 +34,6 @@ let startAuthentication = (aReq) => {
 
     return threeDSSServerData.AResponseHeader = fetch(appData.baseUrl + '/ds/authrequest', {
         method: 'POST',
-        credentials: 'none',
         headers: {
             'Content-Type': 'application/json'
         },
@@ -49,7 +47,7 @@ let doStartAuthentication = (updatedAreq, oldResponse) => {
         .then((response) => response.json())
         .then((response) => {
 
-            console.log("3DS SERVER: RECIEVED ARES");
+            console.log("\n3DS SERVER: RECIEVED ARES");
             console.log(response);
 
             if (!response.threeDSServerTransID) {
@@ -87,7 +85,7 @@ let getUpdatedAreq = (body) => {
         !body.cvv || !body.cc_date ||
         !body.price || !body.name ||
         !body.postcode || !body.city_name ||
-        !body.phone_number || !body.address) {
+        !body.phone_number || !body.address || !body.challengeOption) {
         return (utils.jsonError('Missing a field in request'))
     }
 
@@ -98,11 +96,14 @@ let getUpdatedAreq = (body) => {
     aReq.cardExpiryDate = body.cc_date
     aReq.cardholderName = body.name
     aReq.threeDSServerTransID = body.threeDSServerTransID
+    aReq.option = body.challengeOption
     return aReq
 }
 
 // handle the merchant request starting the protocole
-router.post('/starttransaction', (request, response) => {
+let startTransaction = (request) => {
+
+    let response = request.response
 
     if (!request.body) {
         response.json(utils.jsonError('Missing body in request'))
@@ -116,13 +117,51 @@ router.post('/starttransaction', (request, response) => {
         updatedAreq.threeDSCompInd = 'Y'
     }
 
-    console.log("3DS SERVER: RECIEVED INITIAL PAYMENT REQUEST FROM MERCHANT");
+    console.log("\n3DS SERVER: RECIEVED INITIAL PAYMENT REQUEST FROM MERCHANT");
 
     if (updatedAreq.status === 'ko') { response.json(updatedAreq); return }
     if (!utils.isCreditCardInRange(request.body.cc_number)) { response.json(utils.jsonError('Credit card number is not in 3DS2 range')); return }
     if (!appData.checkThreeDSVersion(updatedAreq.messageVersion)) { response.json(utils.jsonError('Not compatible version')); return }
 
     doStartAuthentication(updatedAreq, response)
+}
+
+//
+// Handle the 3DS Method Notification request and set methodStatus to 'Y' if OK
+//
+router.post('/notificationMethod', (request, response) => {
+    if (!request || !request.body || !request.body.threeDSServerTransID ||
+        !request.body.methodStatus) {
+        response.json({ 'status': 'ko' })
+        return
+    }
+
+
+    // je pars du principe que la 3DS methode fonctionne, sinon ça marchera pas
+    clientData = search.getUserByThreeDSTransID(request.body.threeDSServerTransID, clients)
+    if (clientData) {
+        clientData.isMethodComplete = request.body.methodStatus
+        startTransaction(clientData.waitingRequest)
+    }
+    console.log("METHOD COMPLETE AND NOTIFICATION RECIEDVED");
+
+    response.json({ 'status': 'ok' })
+})
+
+// Take the payment request and store it waiting 3ds method to finish
+router.post('/waitMethod', (request, response) => {
+    if (!request || !request.body || !request.body.threeDSServerTransID) {
+        response.json({ 'status': 'ko' })
+        return
+    }
+    
+    console.log("WAITMETHOD triggered");
+
+    let userData = search.getUserByThreeDSTransID(request.body.threeDSServerTransID, clients)
+    userData.waitingRequest = {}
+    userData.waitingRequest.body = request.body
+    userData.waitingRequest.response = response
+    return
 })
 
 //
@@ -142,8 +181,8 @@ router.post('/result', (request, response) => {
             return
         }
 
-        console.log("3DS SERVER: RECIEVED AREQ, CHECKING AND SENDING BACK ARES:");
-        console.log(JSON.stringify(request.body));
+        console.log("\n3DS SERVER: RECIEVED RREQ, CHECKING AND SENDING BACK RRES:");
+        console.log(request.body);
 
         (request.body.transStatus === 'Y' || request.body.transStatus === 'A') ? Rres.resultsStatus = '00' : Rres.resultsStatus = '01'
 
@@ -157,26 +196,6 @@ router.post('/result', (request, response) => {
     }
     eMessage.errorDescription = 'Request failed, missing body'
     response.json(eMessage)
-})
-
-//
-// Handle the 3DS Method Notification request and set methodStatus to 'Y' if OK
-//
-router.post('/notificationMethod', (request, response) => {
-    if (!request || !request.body || !request.body.threeDSServerTransID ||
-        !request.body.methodStatus) {
-        response.json({ 'status': 'ko' })
-        return
-    }
-
-
-    clientData = search.getUserByThreeDSTransID(request.body.threeDSServerTransID, clients)
-    if (clientData) {
-        clientData.isMethodComplete = request.body.methodStatus
-    }
-    console.log("METHOD COMPLETE AND NOTIFICATION RECIEDVED");
-
-    response.json({ 'status': 'ok' })
 })
 
 
