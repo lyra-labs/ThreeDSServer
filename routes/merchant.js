@@ -32,7 +32,8 @@ let checkPaymentData = (body) => {
         !body.price || !body.name ||
         !body.postcode || !body.city_name ||
         !body.phone_number || !body.address ||
-        !body.threeDSServerTransID) {
+        !body.threeDSServerTransID ||
+        (body.challengeOption != true && body.challengeOption != false)) {
         return {
             'status': 'ko',
             'message': 'missing one or more field'
@@ -111,7 +112,7 @@ router.post('/notification', (request, response) => {
     console.log('\nNOTIFICATION: RECIEVED: CRES :');
 
     console.log(request.body);
-    
+
     let userData = search.getUserWithoutAresByTransID(request.body.acsTransID, clients)
     if (userData != null) {
         userData.confirmationResponse.json({ 'status': 'authentified' })

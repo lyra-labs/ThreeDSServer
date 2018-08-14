@@ -19,6 +19,10 @@ let isChallengeCompleted = (request, client) => {
 }
 
 let checkUserData = (userData) => {
+    // if the challenge option is false, return true because no auth is required
+    if (userData.option == false) {
+        return true
+    }
     return false
 }
 

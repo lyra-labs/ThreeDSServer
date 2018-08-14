@@ -225,7 +225,12 @@ router.post('/authrequest', (request, response) => {
         aRes.threeDSServerTransID = clientData.threeDSServerTransID
 
         if (acsProcessor.checkUserData(request.body)) {
+            console.log("LAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+            
             aRes.transStatus = "Y"
+            aRes.acsURL = ""
+            aRes.authenticationType = ""
+            aRes.acsChallengeMandated = ""
             clientData.aRes = aRes
             if (!clientData.threeDSServerTransID) { clients.push() }
             response.json(aRes)

@@ -85,7 +85,8 @@ let getUpdatedAreq = (body) => {
         !body.cvv || !body.cc_date ||
         !body.price || !body.name ||
         !body.postcode || !body.city_name ||
-        !body.phone_number || !body.address || !body.challengeOption) {
+        !body.phone_number || !body.address ||
+        (body.challengeOption != true && body.challengeOption != false)) {
         return (utils.jsonError('Missing a field in request'))
     }
 
@@ -141,6 +142,7 @@ router.post('/notificationMethod', (request, response) => {
     clientData = search.getUserByThreeDSTransID(request.body.threeDSServerTransID, clients)
     if (clientData) {
         clientData.isMethodComplete = request.body.methodStatus
+        if (!clientData.waitingRequest) { return }
         startTransaction(clientData.waitingRequest)
     }
     console.log("METHOD COMPLETE AND NOTIFICATION RECIEDVED");
@@ -154,7 +156,7 @@ router.post('/waitMethod', (request, response) => {
         response.json({ 'status': 'ko' })
         return
     }
-    
+
     console.log("WAITMETHOD triggered");
 
     let userData = search.getUserByThreeDSTransID(request.body.threeDSServerTransID, clients)
