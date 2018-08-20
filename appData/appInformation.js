@@ -2,7 +2,7 @@ const validator = require('validator')
 
 
 //  Generic here, should be different and specific in all different servers
-let baseUrl = "http://localhost:4242"
+let baseUrl = "https://threedsserver-demo.lyra-labs.fr"
 
 let data = {
     'threeDSVersion' : '2.1.0',

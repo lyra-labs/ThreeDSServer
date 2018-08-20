@@ -10,7 +10,7 @@ Steps:
 * `npm install` or `yarn install`
 * `node app`
 
-The server is now running on localhost:4242
+The server is now running on localhost:9095
 
 ## Intro
 

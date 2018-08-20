@@ -13,7 +13,7 @@ Steps:
 * `npm install` or `yarn install`
 * `node app`
 
-The server is now running on localhost:4242
+The server is now running on localhost:9095
 
 ## Intro
 This server works in collaboration with the [WebAuthPay](https://github.com/lyra-labs/WebAuthPay) repository, you'll need to have both server launched to use it. Refer to WebauthPay readme to use it.

@@ -18,7 +18,7 @@
         toSend.notificationMethodURL = "#!NOTIFICATION_METHOD_URL!#"
 
         let sendFingerPrintToACS = () => {
-            return fetch('http://localhost:4242/acs/handleMethodInfo', {
+            return fetch('https://threedsserver-demo.lyra-labs.fr/acs/handleMethodInfo', {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json"

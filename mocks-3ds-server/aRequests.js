@@ -14,7 +14,7 @@ let getARequest = () => {
         "threeDSCompInd": "U",
         "threeDSRequestorID": "az0123456789",
         "threeDSRequestorName": "threeDSDemonstrator",
-        "threeDSRequestorURL": "localhost:4242/merchant",
+        "threeDSRequestorURL": "https://threedsserver-demo.lyra-labs.fr/merchant",
         "acquirerBIN": "868491",
         "acquirerMerchantID": "mGm6AJZ1YotkJJmOk0fx",
         "addrMatch": "N",
@@ -28,7 +28,7 @@ let getARequest = () => {
         "billAddrPostCode": "Bill Post Code",
         "billAddrState": "CO",
         "email": "example@example.com",
-        "notificationURL" : 'http://localhost:4242/merchant/notification',
+        "notificationURL" : 'https://threedsserver-demo.lyra-labs.fr/merchant/notification',
         "homePhone": {
             "cc": "123",
             "subscriber": "123456789"
@@ -70,7 +70,7 @@ let getARequest = () => {
         "purchaseExponent": "2",
         "purchaseDate": "20170316141312",
         "transType": "01",
-        "threeDSServerURL": "http://localhost:4242/threedsserver",
+        "threeDSServerURL": "https://threedsserver-demo.lyra-labs.fr/threedsserver",
         "threeDSServerTransID": "8a880dc0-d2d2-4067-bcb1-b08d1690b26e",
         "threeDSServerRefNumber": "3DS_LOA_SER_PPFU_020100_00008",
         "threeDSRequestorAuthenticationInd": "03",
@@ -109,7 +109,7 @@ let getARequest = () => {
         "acctID": "personal account",
         "dsReferenceNumber": "DS_LOA_DIS_PPFU_020100_00010",
         "dsTransID": "1jpe0dc0-i9t2-4067-bcb1-nmt866956sgd",
-        "dsURL": "http://localhost:4242/ds",
+        "dsURL": "https://threedsserver-demo.lyra-labs.fr/ds",
         "payTokenInd": true,
         "purchaseInstalData": "024",
         "merchantRiskIndicator": {
