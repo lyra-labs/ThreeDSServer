@@ -24,7 +24,7 @@ let clients = []
 //  Just return the 3DS Method URL to the DS (Part of the Preq-Pres exchange)
 router.post('/getmethodurl', (request, response) => {
     if (request) {
-        response.json({ 'threeDSMethodURL': appData.baseUrl + '/acs/getMethodHTML' });
+        response.json({ 'threeDSMethodURL': 'https://threedsserver-demo.lyra-labs.fr' + '/acs/getMethodHTML' });
     }
 });
 
@@ -225,7 +225,6 @@ router.post('/authrequest', (request, response) => {
         aRes.threeDSServerTransID = clientData.threeDSServerTransID
 
         if (acsProcessor.checkUserData(request.body)) {
-            console.log("LAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
             
             aRes.transStatus = "Y"
             aRes.acsURL = ""
@@ -239,7 +238,7 @@ router.post('/authrequest', (request, response) => {
             aRes.transStatus = "C"
             clientData.aRes = aRes
             // Set the challenge mode if the analyser ask for it
-            aRes.acsURL = appData.baseUrl + "/acs/providechallenge"
+            aRes.acsURL = 'https://threedsserver-demo.lyra-labs.fr' + "/acs/providechallenge"
 
             if (!clientData.threeDSServerTransID) {
                 clients.push(clientData)
