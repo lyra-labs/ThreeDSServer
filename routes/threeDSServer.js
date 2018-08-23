@@ -231,7 +231,7 @@ router.post('/getmethod', (request, response) => {
 
     let clientData = {}
     methodData.threeDSServerTransID = uuidv1()
-    methodData.notificationMethodURL = 'https://threedsserver-demo.lyra-labs.fr' + '/threedsserver/notificationMethod'
+    methodData.notificationMethodURL = appData.baseUrl + '/threedsserver/notificationMethod'
     clientData.threeDSServerTransID = methodData.threeDSServerTransID
     clients.push(clientData)
     response.json(methodData)

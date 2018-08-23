@@ -141,7 +141,7 @@ router.post('/authrequest', (request, response) => {
 //
 
 let sendRRequestToThreeDSServer = (requestContent, client) => {
-    return fetch(client.URL_3DS_SERVER + '/result', {
+    return fetch(appData.baseUrl + '/threedsserver/result', {
         method: 'POST',
         credentials: 'none',
         headers: {

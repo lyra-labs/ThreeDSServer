@@ -1,13 +1,8 @@
+const appData = require('../appData/appInformation')
+
 // This example is an AReq message between the DS and the ACS. For the AReq message
 // between the 3DS Server and the DS, the Device Information (deviceInfo) data element shall
 // be replaced by its encrypted version the SDK Encrypted Data (sdkEncData).
-
-//
-//  no params at this time, may take some specification as parameter
-//
-
-// authentication messages
-// BRW
 
 let getARequest = () => {
     return {
@@ -70,7 +65,7 @@ let getARequest = () => {
         "purchaseExponent": "2",
         "purchaseDate": "20170316141312",
         "transType": "01",
-        "threeDSServerURL": "https://threedsserver-demo.lyra-labs.fr/threedsserver",
+        "threeDSServerURL": "/threedsserver",
         "threeDSServerTransID": "8a880dc0-d2d2-4067-bcb1-b08d1690b26e",
         "threeDSServerRefNumber": "3DS_LOA_SER_PPFU_020100_00008",
         "threeDSRequestorAuthenticationInd": "03",
@@ -109,7 +104,7 @@ let getARequest = () => {
         "acctID": "personal account",
         "dsReferenceNumber": "DS_LOA_DIS_PPFU_020100_00010",
         "dsTransID": "1jpe0dc0-i9t2-4067-bcb1-nmt866956sgd",
-        "dsURL": "https://threedsserver-demo.lyra-labs.fr/ds",
+        "dsURL": appData.baseUrl + "/ds",
         "payTokenInd": true,
         "purchaseInstalData": "024",
         "merchantRiskIndicator": {
