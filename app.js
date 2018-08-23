@@ -3,6 +3,7 @@ const bodyParser = require('body-parser')
 const https = require('https')
 const fs = require('fs')
 const path = require('path')
+const cors = require('cors')
 
 const config = require('./config.json')
 const threeDSData = require('./appData/threeDSServerPData')
@@ -22,6 +23,7 @@ const my_test = require('./test')
 const app = express()
 const port = config.port;
 
+app.use(cors())
 app.use(bodyParser.json())
 app.use(express.static(path.join(__dirname, 'static')));
 
