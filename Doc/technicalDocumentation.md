@@ -28,11 +28,9 @@ Server components:
 
 WebAuthPay has the client side located on /static/threeds
 
-//
-//  Penser à expliquer comment on gère le Preq/Pres. Placer les explications avant le client
-//
-// détailler les réponses différentes des mocks dans des samples JSON
-//
+### Preq/Pres (3DSServer)
+
+The Preq is then at the server start-up, it is initiated by the 3DS server and call the DS `router.post('/updatepres'; (request, response))`. The acs is then called to retrieve the 3dsMethodURL and everything is sent back and stored in the 3DSServer.
 
 ## Routes detail
 
@@ -54,17 +52,20 @@ Response is:
     notificationMethodURL: ""
 }
 ```
-
+It will then call `startAuthentication(response.threeDSServerTransID)` to create the pending request to will be used later for giving back the Ares next order to the client, it also pass here payment informations.
 Next call is `getIframeContent`, it calls the ACS threeDSMethodURL and take back the content of the 3DS method HTML file. The Iframe is then loaded.
+After the Iframe has finished, the acs will use the 3dsMethodNotificationURl to notify the 3DSServer that will start the Areq/Ares flow using the pending request post parameter data.
+The reponse will come as a response of the pending request sent in startAuthentication. 
 
 file : (threedsController.js)
 
-The page wait until the `receiveMessage(event)` (with event.data.messageType != 'CRes') funtion is called by the hidden iframe, it will then calls `startAuthentication()`  and lauch the 3DS 2.0 flow by calling the /merchant/pay route with payment informations.
+![3dsMethodFlow](https://github.com/lyra-labs/ThreeDSServer/blob/master/Doc/DiagrammeSequenceChallenge.png)
 
-The response tell if the Ares request a challenge or not, if it does the `sendcReq` funtion is called. It receive the HTML of the challenge Iframe as response and spawn it using `savedIframe = $.featherlight(response, defaults)`.
+The response tell if the Ares request a challenge or not, if it does the `sendcReq` funtion is called with the acsURL and IDs as paramaters. It receives the HTML of the challenge Iframe as response and spawn it using `savedIframe = $.featherlight(response, defaults)`.
+If no challenge is required, a succes Iframe is loaded instead.
 The savedIframe variable is kept to close the Iframe later.
-
-Same method as the 3DS method for the closing of the Iframe, the Iframe HTML will call `receiveMessage(event)` (with event.data.messageType == 'CRes'), it will then call the notificationURL and close the Iframe.
+In the response of the `sendcReq` function,  `sendConfirmationRequest()` is called, it will be used as a pending request to close the Iframe after the merchant notification method has been triggered by the acs.
+Once the promise of `sendcReq` has loaded the Iframe, the ACS's iframe JS is doing everything by itself.
 
 ### Merchant (/route/merchant.js)
 
@@ -113,4 +114,4 @@ the RReq / RREs flow by sending an RReq to the DS and after the RRes is received
 
 The /providechallenge route defined by `router.post('/providechallenge', (request, response)` route will modify the HTML challenge to add the user acsTransID and threeDSServerTransID and respond the html challenge page as text that will be loaded by the client.
 
-The /authrequest route defined by `router.post('/authrequest', (request, response)` will take an Areq as request parameter, it will use the methodHash and the user's information to decide if a challenge is required or not. It will then populate the ARes and send it do the DS.
+The /authrequest route defined by `router.post('/authrequest', (request, response)` will take an Areq as request parameter, it will use the methodHash and the user's information to decide if a challenge is required or not. It will then populate the ARes and send it to the DS.
